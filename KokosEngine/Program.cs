@@ -4,7 +4,9 @@
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello, World!");
+            var board = new Board();
+            board.SetStartingPosition();
+            Console.WriteLine(board.AsFEN());
         }
     }
 }
