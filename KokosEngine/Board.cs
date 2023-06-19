@@ -35,12 +35,10 @@ namespace KokosEngine
         bool blackCastleLong;
 
         Piece[] mailbox;
-
         internal Board()
         {
             mailbox = new Piece[64];
         }
-
         internal void SetStartingPosition()
         {
             isWhiteToMove = true;
@@ -80,7 +78,6 @@ namespace KokosEngine
                 BR, BN, BB, BQ, BK, BB, BN, BR
             };
         }
-
         internal string AsFEN()
         {
             StringBuilder sb = new StringBuilder();
@@ -105,7 +102,7 @@ namespace KokosEngine
                             sb.Append(emptyCounter.ToString());
                             emptyCounter = 0;
                         }
-                        sb.Append(PieceToFEN(p));
+                        sb.Append(p.ToFEN());
                     }
                 }
                 //end of file
@@ -153,7 +150,13 @@ namespace KokosEngine
 
             return sb.ToString();
         }
-
+        int bitScanForward(ulong bb)
+        {
+            if (bb == 0) throw new ArgumentException("you bitscanned a zero bitboard");
+            const ulong debruijn64 = 0x03f79d71b4cb0a89;
+            ulong negative = (ulong)(-(long)bb);
+            return index64[((bb & negative) * debruijn64) >> 58];
+        }
         readonly int[] index64 = {
              0,  1, 48,  2, 57, 49, 28,  3,
             61, 58, 50, 42, 38, 29, 17,  4,
@@ -164,13 +167,6 @@ namespace KokosEngine
             46, 26, 40, 15, 34, 20, 31, 10,
             25, 14, 19,  9, 13,  8,  7,  6
         };
-        int bitScanForward(ulong bb)
-        {
-            if (bb == 0) throw new ArgumentException("you bitscanned a zero bitboard");
-            const ulong debruijn64 = 0x03f79d71b4cb0a89;
-            ulong negative = (ulong)(-(long)bb);
-            return index64[((bb & negative) * debruijn64) >> 58];
-        }
 
         /// <summary>
         /// Return algebraic notation of the LSB1 square in given bitboard.
@@ -185,7 +181,6 @@ namespace KokosEngine
             int index = bitScanForward(bitboard);
             return IndexToAlgebraic(index);
         }
-
         string IndexToAlgebraic(int index)
         {
             if (index < 0 || index > 63) throw new ArgumentException("you used an index outside 0-63");
@@ -195,34 +190,5 @@ namespace KokosEngine
             char file = (char)('a' + fileindex);
             return new string(new char[] { file, rank });
         }
-
-        char PieceToFEN(Piece piece)
-        {
-            switch (piece)
-            {
-                case WP: return 'P';
-                case WN: return 'N';
-                case WB: return 'B';
-                case WR: return 'R';
-                case WQ: return 'Q';
-                case WK: return 'K';
-                case BP: return 'p';
-                case BN: return 'n';
-                case BB: return 'b';
-                case BR: return 'r';
-                case BQ: return 'q';
-                case BK: return 'k';
-                default: return '#';
-
-            }
-        }
     }
-
-
-
-    enum Piece
-    {
-        X, WP, WN, WB, WR, WQ, WK, BP, BN, BB, BR, BQ, BK
-    }
-
 }
