@@ -15,6 +15,7 @@ namespace KokosEngine
         static readonly uint m_Special = 0b00000000_00000000_00110000_00000000;
         static readonly uint m_PieceMoved = 0b00000000_00000111_00000000_00000000;
         static readonly uint m_PieceCaptured = 0b00000000_00111000_00000000_00000000;
+        static readonly uint m_MoveType = 0b00000000_00000000_11110000_00000000;
 
         private uint data;
 
@@ -109,5 +110,28 @@ namespace KokosEngine
                 data = (data & ~m_PieceCaptured) | (((uint)value << 19) & m_PieceCaptured);
             }
         }
+        internal MoveType Type
+        {
+            get
+            {
+                return (MoveType)((data & m_MoveType) >> 12);
+            }
+            set
+            {
+                data = (data & ~m_MoveType) | (((uint)value << 12) & m_MoveType);
+            }
+        }
+    }
+
+    internal enum MoveType
+    {
+        Quiet = 0b0000,
+        DoublePawnPush = 0b0001,
+        KingCastle = 0b0010,
+        QueenCastle = 0b0011,
+        Capture = 0b0100,
+        EnPassant = 0b0101,
+        Promotion = 0b1000,
+        PromoCapture = 0b1100
     }
 }
