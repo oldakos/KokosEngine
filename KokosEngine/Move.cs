@@ -131,7 +131,13 @@ namespace KokosEngine
         QueenCastle = 0b0011,
         Capture = 0b0100,
         EnPassant = 0b0101,
-        Promotion = 0b1000,
-        PromoCapture = 0b1100
+        PromoKnight = 0b1000,
+        PromoBishop = 0b1001,
+        PromoRook = 0b1010,
+        PromoQueen = 0b1011,
+        PromoCaptureKnight = 0b1100,
+        PromoCaptureBishop = 0b1101,
+        PromoCaptureRook = 0b1110,
+        PromoCaptureQueen = 0b1111,
     }
 }
