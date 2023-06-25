@@ -39,6 +39,56 @@ namespace KokosEngine
         {
             mailbox = new Piece[64];
         }
+        internal void MakeMove(Move move)
+        {
+            ClearSquareFrom(move);
+            ClearEnPassantSquare();
+
+            switch (move.Type)
+            {
+                case MoveType.Quiet:
+                    SetSquareTo(move);
+                    break;
+                case MoveType.DoublePawnPush:
+                    SetSquareTo(move);
+                    SetEnPassantSquare(move);
+                    break;
+                case MoveType.KingCastle:
+                    MakeKingCastle();
+                    break;
+                case MoveType.QueenCastle:
+                    MakeQueenCastle();
+                    break;
+                case MoveType.Capture:
+                    ClearSquareTo(move);
+                    SetSquareTo(move);
+                    break;
+                case MoveType.EnPassant:
+                    SetSquareTo(move);
+                    ClearEPdPawn(move);
+                    break;
+                case MoveType.PromoKnight:
+                    break;
+                case MoveType.PromoBishop:
+                    break;
+                case MoveType.PromoRook:
+                    break;
+                case MoveType.PromoQueen:
+                    break;
+                case MoveType.PromoCaptureKnight:
+                    break;
+                case MoveType.PromoCaptureBishop:
+                    break;
+                case MoveType.PromoCaptureRook:
+                    break;
+                case MoveType.PromoCaptureQueen:
+                    break;
+                default:
+                    break;
+            }
+        }
+
+
         internal void SetStartingPosition()
         {
             isWhiteToMove = true;
