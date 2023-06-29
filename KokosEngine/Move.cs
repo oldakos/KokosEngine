@@ -19,26 +19,26 @@ namespace KokosEngine
 
         private uint data;
 
-        internal uint SquareFrom
+        internal int SquareFrom
         {
             get
             {
-                return data & m_SquareFrom;
+                return (int)(data & m_SquareFrom);
             }
             set
             {
-                data = (data & ~m_SquareFrom) | (value & m_SquareFrom);
+                data = (uint)((data & ~m_SquareFrom) | (value & m_SquareFrom));
             }
         }
-        internal uint SquareTo
+        internal int SquareTo
         {
             get
             {
-                return (data & m_SquareTo) >> 6;
+                return (int)(data & m_SquareTo) >> 6;
             }
             set
             {
-                data = (data & ~m_SquareTo) | ((value << 6) & m_SquareTo);
+                data = (uint)((data & ~m_SquareTo) | ((value << 6) & m_SquareTo));
             }
         }
         internal bool IsCapture
@@ -77,15 +77,15 @@ namespace KokosEngine
                 }
             }
         }
-        internal uint Special
+        internal int Special
         {
             get
             {
-                return (data & m_Special) >> 12;
+                return (int)(data & m_Special) >> 12;
             }
             set
             {
-                data = (data & ~m_Special) | ((value << 12) & m_Special);
+                data = (uint)((data & ~m_Special) | ((value << 12) & m_Special));
             }
         }
         internal Piece PieceMoved
