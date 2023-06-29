@@ -41,54 +41,103 @@ namespace KokosEngine
         }
         internal void MakeMove(Move move)
         {
-            ClearSquareFrom(move);
-            ClearEnPassantSquare();
+            //todo castling rights, move count
+
+            DisableEnPassant();
 
             switch (move.Type)
             {
-                case MoveType.Quiet:
-                    SetSquareTo(move);
-                    break;
-                case MoveType.DoublePawnPush:
-                    SetSquareTo(move);
-                    SetEnPassantSquare(move);
-                    break;
                 case MoveType.KingCastle:
                     MakeKingCastle();
                     break;
                 case MoveType.QueenCastle:
                     MakeQueenCastle();
                     break;
-                case MoveType.Capture:
-                    ClearSquareTo(move);
-                    SetSquareTo(move);
-                    break;
-                case MoveType.EnPassant:
-                    SetSquareTo(move);
-                    ClearEPdPawn(move);
-                    break;
-                case MoveType.PromoKnight:
-                    break;
-                case MoveType.PromoBishop:
-                    break;
-                case MoveType.PromoRook:
-                    break;
-                case MoveType.PromoQueen:
-                    break;
-                case MoveType.PromoCaptureKnight:
-                    break;
-                case MoveType.PromoCaptureBishop:
-                    break;
-                case MoveType.PromoCaptureRook:
-                    break;
-                case MoveType.PromoCaptureQueen:
-                    break;
                 default:
+                    ClearSquare(move.SquareFrom);
+                    if (move.IsCapture) ClearCapturedPiece(move);
+                    SetSquareTo(move);
                     break;
             }
+            SwitchSideToMove();
         }
+        internal void DisableEnPassant()
+        {
+            enPassant = 0;
+        }
+        internal void SwitchSideToMove()
+        {
+            isWhiteToMove = !isWhiteToMove;
+        }
+        internal void SetSquareTo(Move move)
+        {
+            //todo figure out a way to quickly get bitboard from IsWhiteToMove and move.piece
 
+            if (!move.IsPromotion)
+            {
 
+            }
+            else
+            {
+                MoveType t = move.Type;
+                if (t == MoveType.PromoQueen || t == MoveType.PromoCaptureQueen)
+                {
+
+                }
+                if (t == MoveType.PromoKnight || t == MoveType.PromoCaptureKnight)
+                {
+
+                }
+                if (t == MoveType.PromoBishop || t == MoveType.PromoCaptureBishop)
+                {
+
+                }
+                if (t == MoveType.PromoRook || t == MoveType.PromoCaptureRook)
+                {
+
+                }
+            }
+        }
+        internal void SetBit(ref ulong bitboard, int index)
+        {
+            ulong mask = (ulong)1 << index;
+            bitboard |= mask;
+        }
+        internal void ClearCapturedPiece(Move move)
+        {
+            if (move.Type == MoveType.EnPassant)
+            {
+                int offset;
+                if (isWhiteToMove) offset = -8;
+                else offset = 8;
+                ClearSquare(move.SquareTo + offset);
+            }
+            else
+            {
+                ClearSquare(move.SquareTo);
+            }
+        }
+        internal void ClearSquare(int square)
+        {
+            mailbox[square] = X;
+            ClearBitInAllBitboards(square);
+        }
+        internal void ClearBitInAllBitboards(int square)
+        {
+            ulong mask = ~((ulong)1 << square);
+            whitePawns &= mask;
+            whiteKnights &= mask;
+            whiteBishops &= mask;
+            whiteRooks &= mask;
+            whiteQueens &= mask;
+            whiteKing &= mask;
+            blackPawns &= mask;
+            blackKnights &= mask;
+            blackBishops &= mask;
+            blackRooks &= mask;
+            blackQueens &= mask;
+            blackKing &= mask;
+        }
         internal void SetStartingPosition()
         {
             isWhiteToMove = true;
