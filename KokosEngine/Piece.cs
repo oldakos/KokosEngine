@@ -9,7 +9,7 @@ namespace KokosEngine
 {
     internal enum Piece
     {
-        X, WP, WN, WB, WR, WQ, WK, BP, BN, BB, BR, BQ, BK
+        X, WP=0, WN=1, WB=2, WR=3, WQ=4, WK=5, BP=6, BN=7, BB=8, BR=9, BQ=10, BK=11
     }
 
     internal static class PieceMethods
