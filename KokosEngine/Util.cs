@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace KokosEngine
 {
-    internal static class BBUtil
+    internal static class Util
     {
         static internal int bitScanForward(ulong bb)
         {
@@ -41,14 +41,19 @@ namespace KokosEngine
         }
         static internal string IndexToAlgebraic(int index)
         {
-            if (index < 0 || index > 63) throw new ArgumentException("you used an index outside 0-63");
             int rankindex = index / 8;
             int fileindex = index % 8;
             char rank = (char)('1' + rankindex);
             char file = (char)('a' + fileindex);
             return new string(new char[] { file, rank });
         }
-
-
+        static internal int AlgebraicToIndex(string alg)
+        {
+            char file = alg[0];
+            char rank = alg[1];
+            int fileindex = file - 'a';
+            int rankindex = rank - '1';
+            return 8 * rankindex + fileindex;
+        }
     }
 }

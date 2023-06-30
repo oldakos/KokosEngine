@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using static KokosEngine.Piece;
@@ -15,11 +16,16 @@ namespace KokosEngine
             get { return PlayerToMove == 1; }
             set { PlayerToMove = value ? 1 : -1; }
         }
+        bool BlackMove
+        {
+            get { return !WhiteMove; }
+            set { WhiteMove = !value; }
+        }
 
         int HalfmovesReversible; //halfmoves played since last capture or pawn move
         int FullmovesTotal; //increments after black moves
 
-        ulong PossibleEPSquare; //bitboard with 0 or 1 squares where en passant is possible
+        ulong PossibleEPSquareBB; //bitboard with 0 or 1 squares where en passant is possible
 
         ulong[] Bitboards;
         #region Bitboard Properties
@@ -99,9 +105,7 @@ namespace KokosEngine
         }
         internal void MakeMove(Move move)
         {
-            //todo move count
-
-            DisableEnPassant();
+            //todo move count            
 
             switch (move.Type)
             {
@@ -117,7 +121,52 @@ namespace KokosEngine
                     SetSquareTo(move);
                     break;
             }
+
+            if(move.IsCapture || (move.PieceMoved == WP) || (move.PieceMoved == BP))
+            {
+                HalfmovesReversible = 0;
+            }
+            else
+            {
+                HalfmovesReversible++;
+            }
+
+            if (BlackMove)
+            {
+                FullmovesTotal++;
+            }
+
+            SetPossibleEPSquare(move);
+            DisableCastlingRights(move);
             SwitchPlayerToMove();
+        }
+        internal void DisableCastlingRights(Move move)
+        {
+            if (CastleRightWhiteShort)
+            {
+                if (move.PieceMoved == WK || (move.PieceMoved == WR && move.SquareFrom == 7)) CastleRightWhiteShort = false;
+            }
+            if (CastleRightWhiteLong)
+            {
+                if (move.PieceMoved == WK || (move.PieceMoved == WR && move.SquareFrom == 0)) CastleRightWhiteLong = false;
+            }
+            if (CastleRightBlackShort)
+            {
+                if (move.PieceMoved == BK || (move.PieceMoved == BR && move.SquareFrom == 63)) CastleRightBlackShort = false;
+            }
+            if (CastleRightBlackLong)
+            {
+                if (move.PieceMoved == BK || (move.PieceMoved == BR && move.SquareFrom == 56)) CastleRightBlackLong = false;
+            }
+        }
+        internal void SetPossibleEPSquare(Move move)
+        {
+            DisableEnPassant();
+            if (move.Type != MoveType.DoublePawnPush) return;
+
+            int offset = -8 * PlayerToMove;
+            int index = move.SquareTo + offset;
+            PossibleEPSquareBB = (ulong)1 << index;
         }
         internal void MakeKingCastle()
         {
@@ -155,7 +204,7 @@ namespace KokosEngine
         }
         internal void DisableEnPassant()
         {
-            PossibleEPSquare = 0;
+            PossibleEPSquareBB = 0;
         }
         internal void SwitchPlayerToMove()
         {
@@ -210,9 +259,9 @@ namespace KokosEngine
             WhiteMove = true;
 
             HalfmovesReversible = 0;
-            FullmovesTotal = 0;
+            FullmovesTotal = 1;
 
-            PossibleEPSquare = 0x0000000000000000;
+            PossibleEPSquareBB = 0x0000000000000000;
 
             WhitePawns = 0x000000000000FF00;
             WhiteKnights = 0x0000000000000042;
@@ -304,7 +353,7 @@ namespace KokosEngine
 
             sb.Append(' '); //section: en passant
 
-            sb.Append(BBUtil.LSB1ToAlgebraic(PossibleEPSquare));
+            sb.Append(Util.LSB1ToAlgebraic(PossibleEPSquareBB));
 
             sb.Append(' '); //section: halfmove clock
 
