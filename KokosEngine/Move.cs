@@ -17,45 +17,45 @@ namespace KokosEngine
         static readonly uint m_PieceCaptured = 0b00000000_00111000_00000000_00000000;
         static readonly uint m_MoveType = 0b00000000_00000000_11110000_00000000;
 
-        private uint data;
+        private uint _data;
 
         internal int SquareFrom
         {
             get
             {
-                return (int)(data & m_SquareFrom);
+                return (int)(_data & m_SquareFrom);
             }
             set
             {
-                data = (uint)((data & ~m_SquareFrom) | (value & m_SquareFrom));
+                _data = (uint)((_data & ~m_SquareFrom) | (value & m_SquareFrom));
             }
         }
         internal int SquareTo
         {
             get
             {
-                return (int)(data & m_SquareTo) >> 6;
+                return (int)(_data & m_SquareTo) >> 6;
             }
             set
             {
-                data = (uint)((data & ~m_SquareTo) | ((value << 6) & m_SquareTo));
+                _data = (uint)((_data & ~m_SquareTo) | ((value << 6) & m_SquareTo));
             }
         }
         internal bool IsCapture
         {
             get
             {
-                return (data & m_Capture) != 0;
+                return (_data & m_Capture) != 0;
             }
             set
             {
                 if (value == true)
                 {
-                    data |= m_Capture;
+                    _data |= m_Capture;
                 }
                 else
                 {
-                    data &= ~m_Capture;
+                    _data &= ~m_Capture;
                 }
             }
         }
@@ -63,17 +63,17 @@ namespace KokosEngine
         {
             get
             {
-                return (data & m_Promotion) != 0;
+                return (_data & m_Promotion) != 0;
             }
             set
             {
                 if (value == true)
                 {
-                    data |= m_Promotion;
+                    _data |= m_Promotion;
                 }
                 else
                 {
-                    data &= ~m_Promotion;
+                    _data &= ~m_Promotion;
                 }
             }
         }
@@ -81,44 +81,44 @@ namespace KokosEngine
         {
             get
             {
-                return (int)(data & m_Special) >> 12;
+                return (int)(_data & m_Special) >> 12;
             }
             set
             {
-                data = (uint)((data & ~m_Special) | ((value << 12) & m_Special));
+                _data = (uint)((_data & ~m_Special) | ((value << 12) & m_Special));
             }
         }
         internal Piece PieceMoved
         {
             get
             {
-                return (Piece)((data & m_PieceMoved) >> 16);
+                return (Piece)((_data & m_PieceMoved) >> 16);
             }
             set
             {
-                data = (data & ~m_PieceMoved) | (((uint)value << 16) & m_PieceMoved);
+                _data = (_data & ~m_PieceMoved) | (((uint)value << 16) & m_PieceMoved);
             }
         }
         internal Piece PieceCaptured
         {
             get
             {
-                return (Piece)((data & m_PieceCaptured) >> 19);
+                return (Piece)((_data & m_PieceCaptured) >> 19);
             }
             set
             {
-                data = (data & ~m_PieceCaptured) | (((uint)value << 19) & m_PieceCaptured);
+                _data = (_data & ~m_PieceCaptured) | (((uint)value << 19) & m_PieceCaptured);
             }
         }
         internal MoveType Type
         {
             get
             {
-                return (MoveType)((data & m_MoveType) >> 12);
+                return (MoveType)((_data & m_MoveType) >> 12);
             }
             set
             {
-                data = (data & ~m_MoveType) | (((uint)value << 12) & m_MoveType);
+                _data = (_data & ~m_MoveType) | (((uint)value << 12) & m_MoveType);
             }
         }
     }

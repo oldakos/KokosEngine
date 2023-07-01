@@ -11,6 +11,7 @@ namespace KokosEngine
     internal class Board
     {
         int PlayerToMove; //white=1 black=-1
+        #region Player To Move Bool Properties
         bool WhiteMove
         {
             get { return PlayerToMove == 1; }
@@ -21,9 +22,10 @@ namespace KokosEngine
             get { return !WhiteMove; }
             set { WhiteMove = !value; }
         }
+        #endregion
 
         int HalfmovesReversible; //halfmoves played since last capture or pawn move
-        int FullmovesTotal; //increments after black moves
+        int CurrentFullmove; //increments after black moves, starts at 1
 
         ulong PossibleEPSquareBB; //bitboard with 0 or 1 squares where en passant is possible
 
@@ -91,22 +93,59 @@ namespace KokosEngine
         }
         #endregion
 
-        bool CastleRightWhiteShort;
-        bool CastleRightWhiteLong;
-        bool CastleRightBlackShort;
-        bool CastleRightBlackLong;
+        int[] CastlingDisablingMoves; //number of move when each castling right has been lost
+        #region Castling Rights Properties
+        bool CanCastleWhiteShort
+        {
+            get { return CastlingDisablingMoves[0] == 0; }
+            set
+            {
+                if (value == true) CastlingDisablingMoves[0] = 0;
+                else CastlingDisablingMoves[0] = CurrentFullmove;
+            }
+        }
+        bool CanCastleWhiteLong
+        {
+            get { return CastlingDisablingMoves[1] == 0; }
+            set
+            {
+                if (value == true) CastlingDisablingMoves[1] = 0;
+                else CastlingDisablingMoves[1] = CurrentFullmove;
+            }
+        }
+        bool CanCastleBlackShort
+        {
+            get { return CastlingDisablingMoves[2] == 0; }
+            set
+            {
+                if (value == true) CastlingDisablingMoves[2] = 0;
+                else CastlingDisablingMoves[2] = CurrentFullmove;
+            }
+        }
+        bool CanCastleBlackLong
+        {
+            get { return CastlingDisablingMoves[3] == 0; }
+            set
+            {
+                if (value == true) CastlingDisablingMoves[3] = 0;
+                else CastlingDisablingMoves[3] = CurrentFullmove;
+            }
+        }
+        #endregion
 
         Piece[] Mailbox;
+
+        Stack<MoveAndIrreversibleInfo> History;
 
         internal Board()
         {
             Mailbox = new Piece[64];
             Bitboards = new ulong[12];
+            CastlingDisablingMoves = new int[4];
+            History = new Stack<MoveAndIrreversibleInfo>();
         }
         internal void MakeMove(Move move)
         {
-            //todo move count            
-
             switch (move.Type)
             {
                 case MoveType.KingCastle:
@@ -121,8 +160,9 @@ namespace KokosEngine
                     SetSquareTo(move);
                     break;
             }
-
-            if(move.IsCapture || (move.PieceMoved == WP) || (move.PieceMoved == BP))
+            StoreHistory(move);
+            SetPossibleEPSquare(move);
+            if (move.IsCapture || (move.PieceMoved == WP) || (move.PieceMoved == BP))
             {
                 HalfmovesReversible = 0;
             }
@@ -130,34 +170,74 @@ namespace KokosEngine
             {
                 HalfmovesReversible++;
             }
-
+            DisableCastlingRights(move);
             if (BlackMove)
             {
-                FullmovesTotal++;
+                CurrentFullmove++;
             }
-
-            SetPossibleEPSquare(move);
-            DisableCastlingRights(move);
             SwitchPlayerToMove();
+        }
+        internal void UnmakeMove()
+        {
+            UnmakeMove(History.Pop());
+        }
+        internal void UnmakeMove(MoveAndIrreversibleInfo info)
+        {
+            SwitchPlayerToMove();
+            if (BlackMove)
+            {
+                CurrentFullmove--;
+            }
+            ResetCastlingRights();
+
+            HalfmovesReversible = info.Halfmoves;
+            PossibleEPSquareBB = info.EnPassantBB;
+
+            var move = info.Move;
+            switch (move.Type)
+            {
+                case MoveType.KingCastle:
+                    UnmakeKingCastle();
+                    break;
+                case MoveType.QueenCastle:
+                    UnmakeQueenCastle();
+                    break;
+                default:
+                    ClearSquare(move.SquareTo);
+                    if (move.IsCapture) ResetCapturedPiece(move);
+                    ResetSquareFrom(move);
+                    break;
+            }
+        }
+        internal void StoreHistory(Move move)
+        {
+            History.Push(new MoveAndIrreversibleInfo(move, PossibleEPSquareBB, HalfmovesReversible));
         }
         internal void DisableCastlingRights(Move move)
         {
-            if (CastleRightWhiteShort)
+            if (CanCastleWhiteShort)
             {
-                if (move.PieceMoved == WK || (move.PieceMoved == WR && move.SquareFrom == 7)) CastleRightWhiteShort = false;
+                if (move.PieceMoved == WK || (move.PieceMoved == WR && move.SquareFrom == 7)) CanCastleWhiteShort = false;
             }
-            if (CastleRightWhiteLong)
+            if (CanCastleWhiteLong)
             {
-                if (move.PieceMoved == WK || (move.PieceMoved == WR && move.SquareFrom == 0)) CastleRightWhiteLong = false;
+                if (move.PieceMoved == WK || (move.PieceMoved == WR && move.SquareFrom == 0)) CanCastleWhiteLong = false;
             }
-            if (CastleRightBlackShort)
+            if (CanCastleBlackShort)
             {
-                if (move.PieceMoved == BK || (move.PieceMoved == BR && move.SquareFrom == 63)) CastleRightBlackShort = false;
+                if (move.PieceMoved == BK || (move.PieceMoved == BR && move.SquareFrom == 63)) CanCastleBlackShort = false;
             }
-            if (CastleRightBlackLong)
+            if (CanCastleBlackLong)
             {
-                if (move.PieceMoved == BK || (move.PieceMoved == BR && move.SquareFrom == 56)) CastleRightBlackLong = false;
+                if (move.PieceMoved == BK || (move.PieceMoved == BR && move.SquareFrom == 56)) CanCastleBlackLong = false;
             }
+        }
+        internal void ResetCastlingRights()
+        {
+            if (CurrentFullmove == CastlingDisablingMoves[0]) CanCastleWhiteShort = true;
+            if (CurrentFullmove == CastlingDisablingMoves[1]) CanCastleWhiteLong = true;
+            if (CurrentFullmove == CastlingDisablingMoves[2]) CanCastleBlackShort = true;
+            if (CurrentFullmove == CastlingDisablingMoves[3]) CanCastleBlackLong = true;
         }
         internal void SetPossibleEPSquare(Move move)
         {
@@ -185,6 +265,23 @@ namespace KokosEngine
                 SetPieceOnSquare(WR, 61);
             }
         }
+        internal void UnmakeKingCastle()
+        {
+            if (WhiteMove)
+            {
+                ClearSquare(6);
+                SetPieceOnSquare(WK, 4);
+                ClearSquare(5);
+                SetPieceOnSquare(WR, 7);
+            }
+            else
+            {
+                ClearSquare(62);
+                SetPieceOnSquare(WK, 60);
+                ClearSquare(61);
+                SetPieceOnSquare(WR, 63);
+            }
+        }
         internal void MakeQueenCastle()
         {
             if (WhiteMove)
@@ -200,6 +297,23 @@ namespace KokosEngine
                 SetPieceOnSquare(WK, 58);
                 ClearSquare(56);
                 SetPieceOnSquare(WR, 59);
+            }
+        }
+        internal void UnmakeQueenCastle()
+        {
+            if (WhiteMove)
+            {
+                ClearSquare(2);
+                SetPieceOnSquare(WK, 4);
+                ClearSquare(3);
+                SetPieceOnSquare(WR, 0);
+            }
+            else
+            {
+                ClearSquare(58);
+                SetPieceOnSquare(WK, 60);
+                ClearSquare(59);
+                SetPieceOnSquare(WR, 56);
             }
         }
         internal void DisableEnPassant()
@@ -223,6 +337,10 @@ namespace KokosEngine
                 SetPieceOnSquare(move.PieceMoved, move.SquareTo);
             }
         }
+        internal void ResetSquareFrom(Move move)
+        {
+            SetPieceOnSquare(move.PieceMoved, move.SquareFrom);
+        }
         internal void SetPieceOnSquare(Piece piece, int index)
         {
             ulong mask = (ulong)1 << index;
@@ -239,6 +357,18 @@ namespace KokosEngine
             else
             {
                 ClearSquare(move.SquareTo);
+            }
+        }
+        internal void ResetCapturedPiece(Move move)
+        {
+            if (move.Type == MoveType.EnPassant)
+            {
+                int offset = -8 * PlayerToMove;
+                SetPieceOnSquare(move.PieceCaptured, move.SquareTo + offset);
+            }
+            else
+            {
+                SetPieceOnSquare(move.PieceCaptured, move.SquareTo);
             }
         }
         internal void ClearSquare(int square)
@@ -259,7 +389,7 @@ namespace KokosEngine
             WhiteMove = true;
 
             HalfmovesReversible = 0;
-            FullmovesTotal = 1;
+            CurrentFullmove = 1;
 
             PossibleEPSquareBB = 0x0000000000000000;
 
@@ -269,8 +399,8 @@ namespace KokosEngine
             WhiteRooks = 0x0000000000000081;
             WhiteQueens = 0x0000000000000010;
             WhiteKing = 0x0000000000000008;
-            CastleRightWhiteShort = true;
-            CastleRightWhiteLong = true;
+            CanCastleWhiteShort = true;
+            CanCastleWhiteLong = true;
 
             BlackPawns = 0x00FF000000000000;
             BlackKnights = 0x4200000000000000;
@@ -278,8 +408,8 @@ namespace KokosEngine
             BlackRooks = 0x8100000000000000;
             BlackQueens = 0x1000000000000000;
             BlackKing = 0x0800000000000000;
-            CastleRightBlackShort = true;
-            CastleRightBlackLong = true;
+            CanCastleBlackShort = true;
+            CanCastleBlackLong = true;
 
             Mailbox = new Piece[]
             {
@@ -339,16 +469,16 @@ namespace KokosEngine
 
             sb.Append(' '); //section: castling
 
-            if (!(CastleRightWhiteShort || CastleRightWhiteLong || CastleRightBlackShort || CastleRightBlackLong))
+            if (!(CanCastleWhiteShort || CanCastleWhiteLong || CanCastleBlackShort || CanCastleBlackLong))
             {
                 sb.Append('-');
             }
             else
             {
-                if (CastleRightWhiteShort) sb.Append('K');
-                if (CastleRightWhiteLong) sb.Append('Q');
-                if (CastleRightBlackShort) sb.Append('k');
-                if (CastleRightBlackLong) sb.Append('q');
+                if (CanCastleWhiteShort) sb.Append('K');
+                if (CanCastleWhiteLong) sb.Append('Q');
+                if (CanCastleBlackShort) sb.Append('k');
+                if (CanCastleBlackLong) sb.Append('q');
             }
 
             sb.Append(' '); //section: en passant
@@ -361,7 +491,7 @@ namespace KokosEngine
 
             sb.Append(' '); //section: fullmove number
 
-            sb.Append(FullmovesTotal.ToString());
+            sb.Append(CurrentFullmove.ToString());
 
             return sb.ToString();
         }
