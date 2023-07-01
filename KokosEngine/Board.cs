@@ -10,92 +10,92 @@ namespace KokosEngine
 {
     internal class Board
     {
-        int PlayerToMove; //white=1 black=-1
+        internal int PlayerToMove; //white=1 black=-1
         #region Player To Move Bool Properties
-        bool WhiteMove
+        internal bool WhiteMove
         {
             get { return PlayerToMove == 1; }
             set { PlayerToMove = value ? 1 : -1; }
         }
-        bool BlackMove
+        internal bool BlackMove
         {
             get { return !WhiteMove; }
             set { WhiteMove = !value; }
         }
         #endregion
 
-        int HalfmovesReversible; //halfmoves played since last capture or pawn move
-        int CurrentFullmove; //increments after black moves, starts at 1
+        internal int HalfmovesReversible; //halfmoves played since last capture or pawn move
+        internal int CurrentFullmove; //increments after black moves, starts at 1
 
-        ulong PossibleEPSquareBB; //bitboard with 0 or 1 squares where en passant is possible
+        internal ulong PossibleEPSquareBB; //bitboard with 0 or 1 squares where en passant is possible
 
-        ulong[] Bitboards;
+        internal ulong[] Bitboards;
         #region Bitboard Properties
-        ulong WhitePawns
+        internal ulong WhitePawns
         {
             get { return Bitboards[0]; }
             set { Bitboards[0] = value; }
         }
-        ulong WhiteKnights
+        internal ulong WhiteKnights
         {
             get { return Bitboards[1]; }
             set { Bitboards[1] = value; }
         }
-        ulong WhiteBishops
+        internal ulong WhiteBishops
         {
             get { return Bitboards[2]; }
             set { Bitboards[2] = value; }
         }
-        ulong WhiteRooks
+        internal ulong WhiteRooks
         {
             get { return Bitboards[3]; }
             set { Bitboards[3] = value; }
         }
-        ulong WhiteQueens
+        internal ulong WhiteQueens
         {
             get { return Bitboards[4]; }
             set { Bitboards[4] = value; }
         }
-        ulong WhiteKing
+        internal ulong WhiteKing
         {
             get { return Bitboards[5]; }
             set { Bitboards[5] = value; }
         }
-        ulong BlackPawns
+        internal ulong BlackPawns
         {
             get { return Bitboards[6]; }
             set { Bitboards[6] = value; }
         }
-        ulong BlackKnights
+        internal ulong BlackKnights
         {
             get { return Bitboards[7]; }
             set { Bitboards[7] = value; }
         }
-        ulong BlackBishops
+        internal ulong BlackBishops
         {
             get { return Bitboards[8]; }
             set { Bitboards[8] = value; }
         }
-        ulong BlackRooks
+        internal ulong BlackRooks
         {
             get { return Bitboards[9]; }
             set { Bitboards[9] = value; }
         }
-        ulong BlackQueens
+        internal ulong BlackQueens
         {
             get { return Bitboards[10]; }
             set { Bitboards[10] = value; }
         }
-        ulong BlackKing
+        internal ulong BlackKing
         {
             get { return Bitboards[11]; }
             set { Bitboards[11] = value; }
         }
         #endregion
 
-        int[] CastlingDisablingMoves; //number of move when each castling right has been lost
+        internal int[] CastlingDisablingMoves; //number of move when each castling right has been lost
         #region Castling Rights Properties
-        bool CanCastleWhiteShort
+        internal bool CanCastleWhiteShort
         {
             get { return CastlingDisablingMoves[0] == 0; }
             set
@@ -104,7 +104,7 @@ namespace KokosEngine
                 else CastlingDisablingMoves[0] = CurrentFullmove;
             }
         }
-        bool CanCastleWhiteLong
+        internal bool CanCastleWhiteLong
         {
             get { return CastlingDisablingMoves[1] == 0; }
             set
@@ -113,7 +113,7 @@ namespace KokosEngine
                 else CastlingDisablingMoves[1] = CurrentFullmove;
             }
         }
-        bool CanCastleBlackShort
+        internal bool CanCastleBlackShort
         {
             get { return CastlingDisablingMoves[2] == 0; }
             set
@@ -122,7 +122,7 @@ namespace KokosEngine
                 else CastlingDisablingMoves[2] = CurrentFullmove;
             }
         }
-        bool CanCastleBlackLong
+        internal bool CanCastleBlackLong
         {
             get { return CastlingDisablingMoves[3] == 0; }
             set
@@ -133,9 +133,9 @@ namespace KokosEngine
         }
         #endregion
 
-        Piece[] Mailbox;
+        internal Piece[] Mailbox;
 
-        Stack<MoveAndIrreversibleInfo> History;
+        internal Stack<MoveAndIrreversibleInfo> History;
 
         internal Board()
         {
