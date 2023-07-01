@@ -234,10 +234,10 @@ namespace KokosEngine
         }
         internal void ResetCastlingRights()
         {
-            if (CurrentFullmove == CastlingDisablingMoves[0]) CanCastleWhiteShort = true;
-            if (CurrentFullmove == CastlingDisablingMoves[1]) CanCastleWhiteLong = true;
-            if (CurrentFullmove == CastlingDisablingMoves[2]) CanCastleBlackShort = true;
-            if (CurrentFullmove == CastlingDisablingMoves[3]) CanCastleBlackLong = true;
+            if (WhiteMove && CurrentFullmove == CastlingDisablingMoves[0]) CanCastleWhiteShort = true;
+            if (WhiteMove && CurrentFullmove == CastlingDisablingMoves[1]) CanCastleWhiteLong = true;
+            if (BlackMove && CurrentFullmove == CastlingDisablingMoves[2]) CanCastleBlackShort = true;
+            if (BlackMove && CurrentFullmove == CastlingDisablingMoves[3]) CanCastleBlackLong = true;
         }
         internal void SetPossibleEPSquare(Move move)
         {
