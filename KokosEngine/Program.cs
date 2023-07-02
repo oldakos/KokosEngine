@@ -4,7 +4,7 @@
     {
         static void Main(string[] args)
         {
-            var board = new Board();
+            var board = new Gamestate();
             board.SetStartingPosition();
             Console.WriteLine(board.AsFEN());
             var move1 = new Move();

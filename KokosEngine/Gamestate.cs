@@ -8,7 +8,7 @@ using static KokosEngine.Piece;
 
 namespace KokosEngine
 {
-    internal class Board
+    internal class Gamestate
     {
         //TODO: make/unmake doesn't update the mailbox
 
@@ -142,7 +142,7 @@ namespace KokosEngine
 
         internal Stack<MoveAndIrreversibleInfo> History;
 
-        internal Board()
+        internal Gamestate()
         {
             Mailbox = new Piece[64];
             Bitboards = new ulong[12];
