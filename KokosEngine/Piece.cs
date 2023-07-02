@@ -9,7 +9,7 @@ namespace KokosEngine
 {
     internal enum Piece
     {
-        WP=0, WN=1, WB=2, WR=3, WQ=4, WK=5, BP=6, BN=7, BB=8, BR=9, BQ=10, BK=11, X
+        WP = 0, WN = 1, WB = 2, WR = 3, WQ = 4, WK = 5, BP = 6, BN = 7, BB = 8, BR = 9, BQ = 10, BK = 11, X = 12
     }
 
     internal static class PieceMethods
@@ -32,6 +32,14 @@ namespace KokosEngine
                 case BK: return 'k';
                 default: return '#';
             }
+        }
+        internal static bool IsWhite(this Piece piece)
+        {
+            return (int)piece < 6;
+        }
+        internal static bool IsBlack(this Piece piece)
+        {
+            return ((int)piece >= 6) && piece != Piece.X;
         }
     }
 }

@@ -121,6 +121,15 @@ namespace KokosEngine
                 _data = (_data & ~m_MoveType) | (((uint)value << 12) & m_MoveType);
             }
         }
+        internal Piece PiecePromotedTo
+        {
+            get
+            {
+                int index = Special;
+                if (PieceMoved.IsBlack()) index += 6;
+                return (Piece)index;
+            }
+        }
     }
 
     internal enum MoveType

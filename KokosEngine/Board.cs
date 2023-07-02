@@ -10,6 +10,8 @@ namespace KokosEngine
 {
     internal class Board
     {
+        //TODO: make/unmake doesn't update the mailbox
+
         internal int PlayerToMove; //white=1 black=-1
         #region Player To Move Bool Properties
         internal bool WhiteMove
@@ -348,9 +350,7 @@ namespace KokosEngine
         {
             if (move.IsPromotion)
             {
-                //decipher this i dare you
-                int index = 4 + move.Special + (-3 * PlayerToMove);
-                SetPieceOnSquare((Piece)index, move.SquareTo);
+                SetPieceOnSquare(move.PiecePromotedTo, move.SquareTo);
             }
             else
             {
