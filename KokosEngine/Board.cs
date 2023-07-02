@@ -30,7 +30,7 @@ namespace KokosEngine
         internal ulong PossibleEPSquareBB; //bitboard with 0 or 1 squares where en passant is possible
 
         internal ulong[] Bitboards;
-        #region Bitboard Properties
+        #region Individual Bitboard Properties
         internal ulong WhitePawns
         {
             get { return Bitboards[0]; }
@@ -91,6 +91,9 @@ namespace KokosEngine
             get { return Bitboards[11]; }
             set { Bitboards[11] = value; }
         }
+        #endregion
+        #region Helper Bitboard Properties
+
         #endregion
 
         internal int[] CastlingDisablingMoves; //number of move when each castling right has been lost
