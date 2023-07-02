@@ -149,6 +149,34 @@ namespace KokosEngine
         }
         internal void MakeMove(Move move)
         {
+            UpdatePiecesState(move);
+            StoreHistory(move);
+            UpdatePossibleEPSquare(move);
+            AdjustReversibleHalfmoveCounter(move);
+            DisableCastlingRights(move);
+            IncrementFullmoveCounter();
+            SwitchPlayerToMove();
+        }
+        internal void IncrementFullmoveCounter()
+        {
+            if (BlackMove)
+            {
+                CurrentFullmove++;
+            }
+        }
+        internal void AdjustReversibleHalfmoveCounter(Move move)
+        {
+            if (move.IsCapture || (move.PieceMoved == WP) || (move.PieceMoved == BP))
+            {
+                HalfmovesReversible = 0;
+            }
+            else
+            {
+                HalfmovesReversible++;
+            }
+        }
+        internal void UpdatePiecesState(Move move)
+        {
             switch (move.Type)
             {
                 case MoveType.KingCastle:
@@ -163,40 +191,9 @@ namespace KokosEngine
                     SetSquareTo(move);
                     break;
             }
-            StoreHistory(move);
-            SetPossibleEPSquare(move);
-            if (move.IsCapture || (move.PieceMoved == WP) || (move.PieceMoved == BP))
-            {
-                HalfmovesReversible = 0;
-            }
-            else
-            {
-                HalfmovesReversible++;
-            }
-            DisableCastlingRights(move);
-            if (BlackMove)
-            {
-                CurrentFullmove++;
-            }
-            SwitchPlayerToMove();
         }
-        internal void UnmakeMove()
+        internal void RevertPiecesState(Move move)
         {
-            UnmakeMove(History.Pop());
-        }
-        internal void UnmakeMove(MoveAndIrreversibleInfo info)
-        {
-            SwitchPlayerToMove();
-            if (BlackMove)
-            {
-                CurrentFullmove--;
-            }
-            ResetCastlingRights();
-
-            HalfmovesReversible = info.Halfmoves;
-            PossibleEPSquareBB = info.EnPassantBB;
-
-            var move = info.Move;
             switch (move.Type)
             {
                 case MoveType.KingCastle:
@@ -210,6 +207,26 @@ namespace KokosEngine
                     if (move.IsCapture) ResetCapturedPiece(move);
                     ResetSquareFrom(move);
                     break;
+            }
+        }
+        internal void UnmakeMove()
+        {
+            UnmakeMove(History.Pop());
+        }
+        internal void UnmakeMove(MoveAndIrreversibleInfo info)
+        {
+            SwitchPlayerToMove();
+            DecrementFullmoveCounter();
+            RevertCastlingRights();
+            HalfmovesReversible = info.Halfmoves;
+            PossibleEPSquareBB = info.EnPassantBB;
+            RevertPiecesState(info.Move);
+        }
+        internal void DecrementFullmoveCounter()
+        {
+            if (BlackMove)
+            {
+                CurrentFullmove--;
             }
         }
         internal void StoreHistory(Move move)
@@ -235,16 +252,16 @@ namespace KokosEngine
                 if (move.PieceMoved == BK || (move.PieceMoved == BR && move.SquareFrom == 56)) CanCastleBlackLong = false;
             }
         }
-        internal void ResetCastlingRights()
+        internal void RevertCastlingRights()
         {
             if (WhiteMove && CurrentFullmove == CastlingDisablingMoves[0]) CanCastleWhiteShort = true;
             if (WhiteMove && CurrentFullmove == CastlingDisablingMoves[1]) CanCastleWhiteLong = true;
             if (BlackMove && CurrentFullmove == CastlingDisablingMoves[2]) CanCastleBlackShort = true;
             if (BlackMove && CurrentFullmove == CastlingDisablingMoves[3]) CanCastleBlackLong = true;
         }
-        internal void SetPossibleEPSquare(Move move)
+        internal void UpdatePossibleEPSquare(Move move)
         {
-            DisableEnPassant();
+            ClearPossibleEPSquare();
             if (move.Type != MoveType.DoublePawnPush) return;
 
             int offset = -8 * PlayerToMove;
@@ -319,7 +336,7 @@ namespace KokosEngine
                 SetPieceOnSquare(WR, 56);
             }
         }
-        internal void DisableEnPassant()
+        internal void ClearPossibleEPSquare()
         {
             PossibleEPSquareBB = 0;
         }
