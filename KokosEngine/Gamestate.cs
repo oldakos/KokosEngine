@@ -12,6 +12,8 @@ namespace KokosEngine
     {
         //TODO: make/unmake doesn't update the mailbox
 
+        #region Basic Data
+
         internal int PlayerToMove; //white=1 black=-1
         #region Player To Move Bool Properties
         internal bool WhiteMove
@@ -142,6 +144,8 @@ namespace KokosEngine
 
         internal Stack<MoveAndIrreversibleInfo> History;
 
+        #endregion
+
         internal Gamestate()
         {
             Mailbox = new Piece[64];
@@ -159,6 +163,11 @@ namespace KokosEngine
             IncrementFullmoveCounter();
             SwitchPlayerToMove();
         }
+        internal void UnmakeMove()
+        {
+            UnmakeMove(History.Pop());
+        }
+        #region Make/Unmake Move Helper Methods
         internal void IncrementFullmoveCounter()
         {
             if (BlackMove)
@@ -210,11 +219,7 @@ namespace KokosEngine
                     ResetSquareFrom(move);
                     break;
             }
-        }
-        internal void UnmakeMove()
-        {
-            UnmakeMove(History.Pop());
-        }
+        }        
         internal void UnmakeMove(MoveAndIrreversibleInfo info)
         {
             SwitchPlayerToMove();
@@ -404,6 +409,8 @@ namespace KokosEngine
                 Bitboards[i] &= mask;
             }
         }
+        #endregion
+
         internal void SetStartingPosition()
         {
             WhiteMove = true;
