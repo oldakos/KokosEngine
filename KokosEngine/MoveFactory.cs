@@ -31,23 +31,23 @@ namespace KokosEngine
 
             return move;
         }
-        internal static Move WhiteDoublePawnPush(int squareFrom)
+        internal static Move WhiteDoublePawnPush(int squareTo)
         {
             Move move = new Move();
 
-            move.SquareFrom = squareFrom;
-            move.SquareTo = squareFrom + 16;
+            move.SquareTo = squareTo;
+            move.SquareFrom = squareTo - 16;
             move.Type = MoveType.DoublePawnPush;
             move.PieceMoved = Piece.WP;
 
             return move;
         }
-        internal static Move BlackDoublePawnPush(int squareFrom)
+        internal static Move BlackDoublePawnPush(int squareTo)
         {
             Move move = new Move();
 
-            move.SquareFrom = squareFrom;
-            move.SquareTo = squareFrom - 16;
+            move.SquareTo = squareTo;
+            move.SquareFrom = squareTo + 16;
             move.Type = MoveType.DoublePawnPush;
             move.PieceMoved = Piece.BP;
 
@@ -169,6 +169,42 @@ namespace KokosEngine
             move.PieceMoved = Piece.BP;
             move.PieceCaptured = Piece.WP;
 
+            return move;
+        }
+        internal static Move WhiteShortCastle()
+        {
+            Move move = new Move();
+            move.SquareFrom = 4;
+            move.SquareTo = 6;
+            move.Type = MoveType.KingCastle;
+            move.PieceMoved = Piece.WK;
+            return move;
+        }
+        internal static Move BlackShortCastle()
+        {
+            Move move = new Move();
+            move.SquareFrom = 60;
+            move.SquareTo = 62;
+            move.Type = MoveType.KingCastle;
+            move.PieceMoved = Piece.BK;
+            return move;
+        }
+        internal static Move WhiteLongCastle()
+        {
+            Move move = new Move();
+            move.SquareFrom = 4;
+            move.SquareTo = 2;
+            move.Type = MoveType.QueenCastle;
+            move.PieceMoved = Piece.WK;
+            return move;
+        }
+        internal static Move BlackLongCastle()
+        {
+            Move move = new Move();
+            move.SquareFrom = 60;
+            move.SquareTo = 58;
+            move.Type = MoveType.QueenCastle;
+            move.PieceMoved = Piece.BK;
             return move;
         }
     }

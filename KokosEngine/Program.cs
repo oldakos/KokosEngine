@@ -89,12 +89,36 @@
                 Console.WriteLine(board.PrintMailbox());
             }
 
-            ulong bb = Util.BB_2ndRank;
-            foreach (var item in Util.SerializeBitboard(bb))
+            bool knightmoves = false;
+            if (knightmoves)
             {
-                Console.WriteLine(item);
+                KnightMovesLookupGenerator.ToConsole();
             }
 
+            bool kingmoves = false;
+            if (kingmoves)
+            {
+                KingMovesLookupGenerator.ToConsole();
+            }
+
+            //seznam chyb perft
+            //var gs = new Gamestate("r3k2r/1b4bq/8/8/8/8/7B/R3K2R w KQkq - 0 1"); //4 - 1274206
+            //var gs = new Gamestate("1k6/1b6/8/8/7R/8/8/4K2R b K - 0 1"); //5 - 1063513
+            //var gs = new Gamestate("r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1"); //6 - 706045033
+            //var gs = new Gamestate("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1"); //5 - 193690690
+
+            //Console.WriteLine(gs.AsFEN());
+            //foreach (var item in gs.GetPseudoLegalMoves())
+            //{
+            //    Console.WriteLine(Util.IndexToAlgebraic(item.SquareFrom) + Util.IndexToAlgebraic(item.SquareTo));
+            //}
+
+            //gs.MakeMove(MoveFactory.QuietMove(59, 51, Piece.BQ));
+            //Console.WriteLine(Util.BitboardToString(gs.GetBB_AllWhiteAttacks()));
+
+            int depth = 5;
+            Console.WriteLine("Perft " + depth.ToString());
+            Console.WriteLine(gs.Perft(depth, true));
         }
     }
 }

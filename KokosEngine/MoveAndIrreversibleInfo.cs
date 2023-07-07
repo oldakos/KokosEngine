@@ -12,11 +12,10 @@ namespace KokosEngine
         private int _ep;
         private int _halfmoves;
 
-        internal MoveAndIrreversibleInfo(Move move, ulong enPassantBB, int halfmoves)
+        internal MoveAndIrreversibleInfo(Move move, int enPassantIndex, int halfmoves)
         {
             _move = move;
-            if (enPassantBB != 0) _ep = Util.BitScanForward(enPassantBB);
-            else _ep = 0;
+            _ep = enPassantIndex;
             _halfmoves = halfmoves;
         }
         internal Move Move
@@ -30,7 +29,7 @@ namespace KokosEngine
         {
             get
             {
-                if (_ep == 0) return 0;
+                if (_ep < 0 || _ep > 63) return 0;
                 else return ((ulong)1) << _ep;
             }
         }

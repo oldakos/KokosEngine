@@ -33,6 +33,25 @@ namespace KokosEngine
                 default: return '.';
             }
         }
+        internal static Piece FromFEN(char c)
+        {
+            switch (c)
+            {
+                case 'P': return WP;
+                case 'N': return WN;
+                case 'B': return WB;
+                case 'R': return WR;
+                case 'Q': return WQ;
+                case 'K': return WK;
+                case 'p': return BP;
+                case 'n': return BN;
+                case 'b': return BB;
+                case 'r': return BR;
+                case 'q': return BQ;
+                case 'k': return BK;
+                default: return X;
+            }
+        }
         internal static bool IsWhite(this Piece piece)
         {
             return (int)piece < 6;
