@@ -10,8 +10,8 @@ namespace KokosEngine
     {
         #region BB Shifting
 
-        static readonly ulong NotAFile = 0xfefefefefefefefe;
-        static readonly ulong NotHFile = 0x7f7f7f7f7f7f7f7f;
+        static readonly internal ulong NotAFile = 0xfefefefefefefefe;
+        static readonly internal ulong NotHFile = 0x7f7f7f7f7f7f7f7f;
 
         static internal ulong Shift_N(ulong bb) { return bb << 8; }
         static internal ulong Shift_NE(ulong bb) { return (bb << 9) & NotAFile; }
@@ -24,6 +24,22 @@ namespace KokosEngine
 
         #endregion
 
+        static readonly internal ulong BB_1stRank = 0x00000000000000FF;
+        static readonly internal ulong BB_2ndRank = 0x000000000000FF00;
+        static readonly internal ulong BB_7thRank = 0x00FF000000000000;
+        static readonly internal ulong BB_8thRank = 0xFF00000000000000;
+
+        static internal List<int> SerializeBitboard(ulong bb)
+        {
+            var list = new List<int>();
+            while (bb != 0)
+            {
+                int index = BitScanForward(bb);
+                list.Add(index);
+                bb &= bb - 1;
+            }
+            return list;
+        }
 
 
         static internal int BitScanForward(ulong bb)

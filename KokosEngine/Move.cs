@@ -125,7 +125,7 @@ namespace KokosEngine
         {
             get
             {
-                int index = Special;
+                int index = Special + 1;
                 if (PieceMoved.IsBlack()) index += 6;
                 return (Piece)index;
             }

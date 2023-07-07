@@ -34,6 +34,13 @@ namespace KokosEngine
                 else return ((ulong)1) << _ep;
             }
         }
+        internal int EnPassantIndex
+        {
+            get
+            {
+                return _ep;
+            }
+        }
         internal int Halfmoves
         {
             get
