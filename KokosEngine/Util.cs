@@ -8,7 +8,25 @@ namespace KokosEngine
 {
     internal static class Util
     {
-        static internal int bitScanForward(ulong bb)
+        #region BB Shifting
+
+        static readonly ulong NotAFile = 0xfefefefefefefefe;
+        static readonly ulong NotHFile = 0x7f7f7f7f7f7f7f7f;
+
+        static internal ulong Shift_N(ulong bb) { return bb << 8; }
+        static internal ulong Shift_NE(ulong bb) { return (bb << 9) & NotAFile; }
+        static internal ulong Shift_E(ulong bb) { return (bb << 1) & NotAFile; }
+        static internal ulong Shift_SE(ulong bb) { return (bb >> 7) & NotAFile; }
+        static internal ulong Shift_S(ulong bb) { return bb >> 8; }
+        static internal ulong Shift_SW(ulong bb) { return (bb >> 9) & NotHFile; }
+        static internal ulong Shift_W(ulong bb) { return (bb >> 1) & NotHFile; }
+        static internal ulong Shift_NW(ulong bb) { return (bb << 7) & NotHFile; }
+
+        #endregion
+
+
+
+        static internal int BitScanForward(ulong bb)
         {
             if (bb == 0) throw new ArgumentException("you bitscanned a zero bitboard");
             const ulong debruijn64 = 0x03f79d71b4cb0a89;
@@ -36,7 +54,7 @@ namespace KokosEngine
             {
                 return "-";
             }
-            int index = bitScanForward(bitboard);
+            int index = BitScanForward(bitboard);
             return IndexToAlgebraic(index);
         }
         static internal string IndexToAlgebraic(int index)

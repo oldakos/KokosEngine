@@ -97,9 +97,10 @@ namespace KokosEngine
         }
         #endregion
         #region Helper Bitboard Properties
-
-
-
+        internal ulong BB_Occupied { get; set; }
+        internal ulong BB_Empty { get; set; }
+        internal ulong BB_White { get; set; }
+        internal ulong BB_Black { get; set; }
         #endregion
 
         internal int[] CastlingDisablingMoves; //number of move when each castling right has been lost
@@ -164,6 +165,8 @@ namespace KokosEngine
             DisableCastlingRights(move);
             IncrementFullmoveCounter();
             SwitchPlayerToMove();
+
+            RefreshHelperBitboards();
         }
         internal void UnmakeMove()
         {
@@ -177,6 +180,8 @@ namespace KokosEngine
             HalfmovesReversible = info.Halfmoves;
             PossibleEPSquareBB = info.EnPassantBB;
             RevertPiecesState(info.Move);
+
+            RefreshHelperBitboards();
         }
 
         #region Make/Unmake Move Helper Methods
@@ -411,6 +416,21 @@ namespace KokosEngine
             {
                 Bitboards[i] &= mask;
             }
+        }
+        internal void RefreshHelperBitboards()
+        {
+            BB_White = 0;
+            for (int i = 0; i < 6; i++)
+            {
+                BB_White |= Bitboards[i];
+            }
+            BB_Black = 0;
+            for (int i = 6; i < 12; i++)
+            {
+                BB_Black |= Bitboards[i];
+            }
+            BB_Occupied = BB_White | BB_Black;
+            BB_Empty = ~BB_Occupied;
         }
         #endregion
 

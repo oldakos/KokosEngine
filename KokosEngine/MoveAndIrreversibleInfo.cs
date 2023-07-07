@@ -15,7 +15,7 @@ namespace KokosEngine
         internal MoveAndIrreversibleInfo(Move move, ulong enPassantBB, int halfmoves)
         {
             _move = move;
-            if (enPassantBB != 0) _ep = Util.bitScanForward(enPassantBB);
+            if (enPassantBB != 0) _ep = Util.BitScanForward(enPassantBB);
             else _ep = 0;
             _halfmoves = halfmoves;
         }
