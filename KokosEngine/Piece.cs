@@ -30,7 +30,7 @@ namespace KokosEngine
                 case BR: return 'r';
                 case BQ: return 'q';
                 case BK: return 'k';
-                default: return '#';
+                default: return '.';
             }
         }
         internal static bool IsWhite(this Piece piece)

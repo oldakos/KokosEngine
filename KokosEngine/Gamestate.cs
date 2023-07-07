@@ -98,6 +98,8 @@ namespace KokosEngine
         #endregion
         #region Helper Bitboard Properties
 
+
+
         #endregion
 
         internal int[] CastlingDisablingMoves; //number of move when each castling right has been lost
@@ -167,6 +169,16 @@ namespace KokosEngine
         {
             UnmakeMove(History.Pop());
         }
+        internal void UnmakeMove(MoveAndIrreversibleInfo info)
+        {
+            SwitchPlayerToMove();
+            DecrementFullmoveCounter();
+            RevertCastlingRights();
+            HalfmovesReversible = info.Halfmoves;
+            PossibleEPSquareBB = info.EnPassantBB;
+            RevertPiecesState(info.Move);
+        }
+
         #region Make/Unmake Move Helper Methods
         internal void IncrementFullmoveCounter()
         {
@@ -219,15 +231,6 @@ namespace KokosEngine
                     ResetSquareFrom(move);
                     break;
             }
-        }        
-        internal void UnmakeMove(MoveAndIrreversibleInfo info)
-        {
-            SwitchPlayerToMove();
-            DecrementFullmoveCounter();
-            RevertCastlingRights();
-            HalfmovesReversible = info.Halfmoves;
-            PossibleEPSquareBB = info.EnPassantBB;
-            RevertPiecesState(info.Move);
         }
         internal void DecrementFullmoveCounter()
         {
@@ -411,6 +414,12 @@ namespace KokosEngine
         }
         #endregion
 
+        #region Move Generation
+
+
+
+        #endregion
+
         internal void SetStartingPosition()
         {
             WhiteMove = true;
@@ -520,6 +529,19 @@ namespace KokosEngine
 
             sb.Append(CurrentFullmove.ToString());
 
+            return sb.ToString();
+        }
+        internal string PrintMailbox()
+        {
+            StringBuilder sb = new StringBuilder();
+            for (int rank = 7; rank >= 0; rank--)
+            {
+                for (int file = 0; file <= 7; file++)
+                {
+                    sb.Append(Mailbox[8 * rank + file].ToFEN());
+                }
+                if (rank > 0) sb.Append('\n');
+            }
             return sb.ToString();
         }
     }

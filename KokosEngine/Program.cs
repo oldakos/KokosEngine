@@ -77,12 +77,13 @@
             move0.Type = MoveType.EnPassant;
             board.MakeMove(move0);
             Console.WriteLine(board.AsFEN());
-            Console.WriteLine("***************************");
+            Console.WriteLine(board.PrintMailbox());
             for (int i = 0; i < 10; i++)
             {
                 board.UnmakeMove();
                 Console.WriteLine(board.AsFEN());
             }
+            Console.WriteLine(board.PrintMailbox());
         }
     }
 }
