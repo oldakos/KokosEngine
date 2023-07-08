@@ -53,13 +53,13 @@ namespace KokosEngine
 
             return move;
         }
-        internal static Move[] WhitePushPromotions(int squareFrom)
+        internal static Move[] WhitePushPromotions(int squareTo)
         {
             Move[] moves = new Move[4];
             Move move = new Move();
 
-            move.SquareFrom = squareFrom;
-            move.SquareTo = squareFrom + 8;
+            move.SquareTo = squareTo;
+            move.SquareFrom = squareTo - 8;
             move.PieceMoved = Piece.WP;
 
             moves[0] = move;
@@ -76,13 +76,13 @@ namespace KokosEngine
 
             return moves;
         }
-        internal static Move[] BlackPushPromotions(int squareFrom)
+        internal static Move[] BlackPushPromotions(int squareTo)
         {
             Move[] moves = new Move[4];
             Move move = new Move();
 
-            move.SquareFrom = squareFrom;
-            move.SquareTo = squareFrom - 8;
+            move.SquareTo = squareTo;
+            move.SquareFrom = squareTo + 8;
             move.PieceMoved = Piece.BP;
 
             moves[0] = move;

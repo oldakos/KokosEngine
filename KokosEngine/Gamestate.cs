@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using static KokosEngine.Piece;
@@ -11,7 +12,21 @@ namespace KokosEngine
 {
     internal class Gamestate
     {
-        //TODO: make/unmake doesn't update the mailbox
+        /// <summary>
+        /// Is cleared & filled anew by every this.SerializeBitboard() call.
+        /// </summary>
+        private List<int> SerList = new List<int>(32);
+        /// <summary>
+        /// Clears & fills TmpIndexList by result of Util.SerializeBitboard()
+        /// </summary>
+        private void SerializeBitboard(ulong bb)
+        {
+            SerList.Clear();
+            Util.SerializeBitboard(bb, SerList);
+        }
+
+        private List<Move> Moves = new List<Move>(128);
+
 
         #region Basic Data
 
@@ -103,6 +118,23 @@ namespace KokosEngine
         internal ulong BB_Empty { get; set; }
         internal ulong BB_White { get; set; }
         internal ulong BB_Black { get; set; }
+
+        internal ulong BB_AllWhiteAttacks { get; set; }
+        internal ulong BB_AllBlackAttacks { get; set; }
+        internal ulong BB_WhitePawnAttacks { get; set; }
+        internal ulong BB_WhiteKnightAttacks { get; set; }
+        internal ulong BB_WhiteBishopAttacks { get; set; }
+        internal ulong BB_WhiteRookAttacks { get; set; }
+        internal ulong BB_WhiteQueenAttacks { get; set; }
+        internal ulong BB_WhiteKingAttacks { get; set; }
+        internal ulong BB_BlackPawnAttacks { get; set; }
+        internal ulong BB_BlackKnightAttacks { get; set; }
+        internal ulong BB_BlackBishopAttacks { get; set; }
+        internal ulong BB_BlackRookAttacks { get; set; }
+        internal ulong BB_BlackQueenAttacks { get; set; }
+        internal ulong BB_BlackKingAttacks { get; set; }
+
+
         #endregion
 
         internal int[] CastlingDisablingMoves; //number of move when each castling right has been lost
@@ -113,7 +145,7 @@ namespace KokosEngine
             set
             {
                 if (value == true) CastlingDisablingMoves[0] = 0;
-                else CastlingDisablingMoves[0] = CurrentFullmove;
+                else CastlingDisablingMoves[0] = CurrentFullmove * PlayerToMove;
             }
         }
         internal bool CanCastleWhiteLong
@@ -122,7 +154,7 @@ namespace KokosEngine
             set
             {
                 if (value == true) CastlingDisablingMoves[1] = 0;
-                else CastlingDisablingMoves[1] = CurrentFullmove;
+                else CastlingDisablingMoves[1] = CurrentFullmove * PlayerToMove;
             }
         }
         internal bool CanCastleBlackShort
@@ -131,7 +163,7 @@ namespace KokosEngine
             set
             {
                 if (value == true) CastlingDisablingMoves[2] = 0;
-                else CastlingDisablingMoves[2] = CurrentFullmove;
+                else CastlingDisablingMoves[2] = CurrentFullmove * PlayerToMove;
             }
         }
         internal bool CanCastleBlackLong
@@ -140,7 +172,7 @@ namespace KokosEngine
             set
             {
                 if (value == true) CastlingDisablingMoves[3] = 0;
-                else CastlingDisablingMoves[3] = CurrentFullmove;
+                else CastlingDisablingMoves[3] = CurrentFullmove * PlayerToMove;
             }
         }
         #endregion
@@ -162,25 +194,12 @@ namespace KokosEngine
             CastlingDisablingMoves = new int[4];
             for (int i = 0; i < CastlingDisablingMoves.Length; i++)
             {
-                CastlingDisablingMoves[i] = -1;
+                CastlingDisablingMoves[i] = int.MinValue;
             }
             History = new Stack<MoveAndIrreversibleInfo>();
         }
-        internal Gamestate(string fen)
+        internal Gamestate LoadFEN(string fen)
         {
-            Mailbox = new Piece[64];
-            for (int m = 0; m < Mailbox.Length; m++)
-            {
-                Mailbox[m] = Piece.X;
-            }
-            Bitboards = new ulong[12];
-            CastlingDisablingMoves = new int[4];
-            for (int m = 0; m < CastlingDisablingMoves.Length; m++)
-            {
-                CastlingDisablingMoves[m] = -1;
-            }
-            History = new Stack<MoveAndIrreversibleInfo>();
-
             int i = 0;
             //section: piece placement
             Queue<Piece> queue = new Queue<Piece>();
@@ -265,11 +284,10 @@ namespace KokosEngine
             }
             CurrentFullmove = int.Parse(sb2.ToString());
 
+            RefreshAllHelperBitboards();
 
-            RefreshHelperBitboards();
+            return this;
         }
-
-
 
         internal void MakeMove(Move move)
         {
@@ -281,7 +299,7 @@ namespace KokosEngine
             IncrementFullmoveCounter();
             SwitchPlayerToMove();
 
-            RefreshHelperBitboards();
+            RefreshAllHelperBitboards();
         }
         internal void UnmakeMove()
         {
@@ -297,7 +315,7 @@ namespace KokosEngine
             PossibleEPSquare_Index = info.EnPassantIndex;
             RevertPiecesState(info.Move);
 
-            RefreshHelperBitboards();
+            RefreshAllHelperBitboards();
         }
 
         #region Make/Unmake Move Helper Methods
@@ -369,27 +387,27 @@ namespace KokosEngine
         {
             if (CanCastleWhiteShort)
             {
-                if (move.PieceMoved == WK || (move.PieceMoved == WR && move.SquareFrom == 7)) CanCastleWhiteShort = false;
+                if (move.PieceMoved == WK || move.SquareFrom == 7 || move.SquareTo == 7) CanCastleWhiteShort = false;
             }
             if (CanCastleWhiteLong)
             {
-                if (move.PieceMoved == WK || (move.PieceMoved == WR && move.SquareFrom == 0)) CanCastleWhiteLong = false;
+                if (move.PieceMoved == WK || move.SquareFrom == 0 || move.SquareTo == 0) CanCastleWhiteLong = false;
             }
             if (CanCastleBlackShort)
             {
-                if (move.PieceMoved == BK || (move.PieceMoved == BR && move.SquareFrom == 63)) CanCastleBlackShort = false;
+                if (move.PieceMoved == BK || move.SquareFrom == 63 || move.SquareTo == 63) CanCastleBlackShort = false;
             }
             if (CanCastleBlackLong)
             {
-                if (move.PieceMoved == BK || (move.PieceMoved == BR && move.SquareFrom == 56)) CanCastleBlackLong = false;
+                if (move.PieceMoved == BK || move.SquareFrom == 56 || move.SquareTo == 56) CanCastleBlackLong = false;
             }
         }
         internal void RevertCastlingRights()
         {
-            if (IsWhiteMove && CurrentFullmove == CastlingDisablingMoves[0]) CanCastleWhiteShort = true;
-            if (IsWhiteMove && CurrentFullmove == CastlingDisablingMoves[1]) CanCastleWhiteLong = true;
-            if (IsBlackMove && CurrentFullmove == CastlingDisablingMoves[2]) CanCastleBlackShort = true;
-            if (IsBlackMove && CurrentFullmove == CastlingDisablingMoves[3]) CanCastleBlackLong = true;
+            if (CurrentFullmove * PlayerToMove == CastlingDisablingMoves[0]) CanCastleWhiteShort = true;
+            if (CurrentFullmove * PlayerToMove == CastlingDisablingMoves[1]) CanCastleWhiteLong = true;
+            if (CurrentFullmove * PlayerToMove == CastlingDisablingMoves[2]) CanCastleBlackShort = true;
+            if (CurrentFullmove * PlayerToMove == CastlingDisablingMoves[3]) CanCastleBlackLong = true;
         }
         internal void UpdatePossibleEPSquare(Move move)
         {
@@ -536,7 +554,7 @@ namespace KokosEngine
                 Bitboards[i] &= mask;
             }
         }
-        internal void RefreshHelperBitboards()
+        internal void RefreshHelperBitboards(Move move)
         {
             BB_White = 0;
             for (int i = 0; i < 6; i++)
@@ -550,17 +568,66 @@ namespace KokosEngine
             }
             BB_Occupied = BB_White | BB_Black;
             BB_Empty = ~BB_Occupied;
+
+            var pm = move.PieceMoved;
+            var pc = move.PieceCaptured;
+            var pp = move.PiecePromotedTo;
+
+            if (pm == Piece.WN || pc == Piece.WN || pp == Piece.WN) BB_WhiteKnightAttacks = GetBB_WhiteKnightAttacks();
+            if (pm == Piece.BN || pc == Piece.BN || pp == Piece.BN) BB_BlackKnightAttacks = GetBB_BlackKnightAttacks();
+            if (pm == Piece.WP || pc == Piece.WP) BB_WhitePawnAttacks = GetBB_WhitePawnAttacks();
+            if (pm == Piece.BP || pc == Piece.BP) BB_BlackPawnAttacks = GetBB_BlackPawnAttacks();
+            if (pm == Piece.WK) BB_WhiteKingAttacks = GetBB_WhiteKingAttacks();
+            if (pm == Piece.BK) BB_BlackKingAttacks = GetBB_BlackKingAttacks();
+            BB_WhiteBishopAttacks = GetBB_WhiteBishopAttacks();
+            BB_WhiteRookAttacks = GetBB_WhiteRookAttacks();
+            BB_WhiteQueenAttacks = GetBB_WhiteQueenAttacks();
+            BB_BlackBishopAttacks = GetBB_BlackBishopAttacks();
+            BB_BlackRookAttacks = GetBB_BlackRookAttacks();
+            BB_BlackQueenAttacks = GetBB_BlackQueenAttacks();
+            BB_AllWhiteAttacks = GetBB_AllWhiteAttacks();
+            BB_AllBlackAttacks = GetBB_AllBlackAttacks();
+        }
+        internal void RefreshAllHelperBitboards()
+        {
+            BB_White = 0;
+            for (int i = 0; i < 6; i++)
+            {
+                BB_White |= Bitboards[i];
+            }
+            BB_Black = 0;
+            for (int i = 6; i < 12; i++)
+            {
+                BB_Black |= Bitboards[i];
+            }
+            BB_Occupied = BB_White | BB_Black;
+            BB_Empty = ~BB_Occupied;
+
+            BB_WhiteKnightAttacks = GetBB_WhiteKnightAttacks();
+            BB_BlackKnightAttacks = GetBB_BlackKnightAttacks();
+            BB_WhitePawnAttacks = GetBB_WhitePawnAttacks();
+            BB_BlackPawnAttacks = GetBB_BlackPawnAttacks();
+            BB_WhiteKingAttacks = GetBB_WhiteKingAttacks();
+            BB_BlackKingAttacks = GetBB_BlackKingAttacks();
+            BB_WhiteBishopAttacks = GetBB_WhiteBishopAttacks();
+            BB_WhiteRookAttacks = GetBB_WhiteRookAttacks();
+            BB_WhiteQueenAttacks = GetBB_WhiteQueenAttacks();
+            BB_BlackBishopAttacks = GetBB_BlackBishopAttacks();
+            BB_BlackRookAttacks = GetBB_BlackRookAttacks();
+            BB_BlackQueenAttacks = GetBB_BlackQueenAttacks();
+            BB_AllWhiteAttacks = GetBB_AllWhiteAttacks();
+            BB_AllBlackAttacks = GetBB_AllBlackAttacks();
         }
 
         #endregion
 
         internal bool IsWhiteInCheck()
         {
-            return (GetBB_AllBlackAttacks() & BB_WhiteKing) != 0;
+            return (BB_AllBlackAttacks & BB_WhiteKing) != 0;
         }
         internal bool IsBlackInCheck()
         {
-            var value = (GetBB_AllWhiteAttacks() & BB_BlackKing) != 0;
+            var value = (BB_AllWhiteAttacks & BB_BlackKing) != 0;
             if (value)
             {
                 return true;
@@ -582,37 +649,37 @@ namespace KokosEngine
 
         internal List<Move> GetPseudoLegalMoves()
         {
-            List<Move> result = new List<Move>();
+            Moves.Clear();
             if (IsWhiteMove)
             {
-                result.AddRange(GetWhitePawnMoves());
-                result.AddRange(GetWhiteKnightMoves());
-                result.AddRange(GetWhiteBishopMoves());
-                result.AddRange(GetWhiteRookMoves());
-                result.AddRange(GetWhiteQueenMoves());
-                result.AddRange(GetWhiteKingMoves());
+                GetWhitePawnMoves();
+                GetWhiteKnightMoves();
+                GetWhiteBishopMoves();
+                GetWhiteRookMoves();
+                GetWhiteQueenMoves();
+                GetWhiteKingMoves();
             }
             else
             {
-                result.AddRange(GetBlackPawnMoves());
-                result.AddRange(GetBlackKnightMoves());
-                result.AddRange(GetBlackBishopMoves());
-                result.AddRange(GetBlackRookMoves());
-                result.AddRange(GetBlackQueenMoves());
-                result.AddRange(GetBlackKingMoves());
+                GetBlackPawnMoves();
+                GetBlackKnightMoves();
+                GetBlackBishopMoves();
+                GetBlackRookMoves();
+                GetBlackQueenMoves();
+                GetBlackKingMoves();
             }
-            return result;
+            return Moves;
         }
 
         #region Move Generation        
 
         internal ulong GetBB_AllWhiteAttacks()
         {
-            return GetBB_WhitePawnAttacks() | GetBB_WhiteKnightAttacks() | GetBB_WhiteBishopAttacks() | GetBB_WhiteRookAttacks() | GetBB_WhiteQueenAttacks() | GetBB_WhiteKingAttacks();
+            return BB_WhitePawnAttacks | BB_WhiteKnightAttacks | BB_WhiteBishopAttacks | BB_WhiteRookAttacks | BB_WhiteQueenAttacks | BB_WhiteKingAttacks;
         }
         internal ulong GetBB_AllBlackAttacks()
         {
-            return GetBB_BlackPawnAttacks() | GetBB_BlackKnightAttacks() | GetBB_BlackBishopAttacks() | GetBB_BlackRookAttacks() | GetBB_BlackQueenAttacks() | GetBB_BlackKingAttacks();
+            return BB_BlackPawnAttacks | BB_BlackKnightAttacks | BB_BlackBishopAttacks | BB_BlackRookAttacks | BB_BlackQueenAttacks | BB_BlackKingAttacks;
         }
 
 
@@ -631,18 +698,20 @@ namespace KokosEngine
         internal ulong GetBB_WhiteKnightAttacks()
         {
             ulong result = 0;
-            foreach (int knightindex in SerializeBitboard(BB_WhiteKnights))
+            SerializeBitboard(BB_WhiteKnights);
+            for (int i = 0; i < SerList.Count; i++)
             {
-                result |= KnightMoves[knightindex];
+                result |= KnightMoves[SerList[i]];
             }
             return result;
         }
         internal ulong GetBB_BlackKnightAttacks()
         {
             ulong result = 0;
-            foreach (int knightindex in SerializeBitboard(BB_BlackKnights))
+            SerializeBitboard(BB_BlackKnights);
+            for (int i = 0; i < SerList.Count; i++)
             {
-                result |= KnightMoves[knightindex];
+                result |= KnightMoves[SerList[i]];
             }
             return result;
         }
@@ -672,438 +741,390 @@ namespace KokosEngine
         }
         internal ulong GetBB_WhiteKingAttacks()
         {
-            ulong result = 0;
-            foreach (int kingindex in SerializeBitboard(BB_WhiteKing))
-            {
-                result |= KingMoves[kingindex];
-            }
-            return result;
+            int index = BitScanForward(BB_WhiteKing);
+            return KingMoves[index];
         }
         internal ulong GetBB_BlackKingAttacks()
         {
-            ulong result = 0;
-            foreach (int kingindex in SerializeBitboard(BB_BlackKing))
-            {
-                result |= KingMoves[kingindex];
-            }
-            return result;
+            int index = BitScanForward(BB_BlackKing);
+            return KingMoves[index];
         }
 
-        internal List<Move> GetWhitePawnMoves()
+        internal void GetWhitePawnMoves()
         {
-            List<Move> result = new List<Move>();
-            result.AddRange(GetWhitePawnAdvances());
-            result.AddRange(GetWhitePawnCaptures());
-            return result;
+            GetWhitePawnAdvances();
+            GetWhitePawnCaptures();
         }
-        internal List<Move> GetBlackPawnMoves()
+        internal void GetBlackPawnMoves()
         {
-            List<Move> result = new List<Move>();
-            result.AddRange(GetBlackPawnAdvances());
-            result.AddRange(GetBlackPawnCaptures());
-            return result;
+            GetBlackPawnAdvances();
+            GetBlackPawnCaptures();
         }
-        internal List<Move> GetWhitePawnAdvances()
+        internal void GetWhitePawnAdvances()
         {
-            List<Move> list = new List<Move>();
             //double pushes
             ulong bb = BB_WhitePawns & BB_2ndRank;
             bb = Shift_N(bb) & BB_Empty;
             bb = Shift_N(bb) & BB_Empty;
-            foreach (var target in SerializeBitboard(bb))
+            SerializeBitboard(bb);
+            for (int i = 0; i < SerList.Count; i++)
             {
-                list.Add(MoveFactory.WhiteDoublePawnPush(target));
+                Moves.Add(MoveFactory.WhiteDoublePawnPush(SerList[i]));
             }
             //promotions
             bb = BB_WhitePawns & BB_7thRank;
             bb = Shift_N(bb) & BB_Empty;
-            foreach (var target in SerializeBitboard(bb))
+            SerializeBitboard(bb);
+            for (int i = 0; i < SerList.Count; i++)
             {
-                list.AddRange(MoveFactory.WhitePushPromotions(target - 8));
+                Moves.AddRange(MoveFactory.WhitePushPromotions(SerList[i]));
             }
             //quiet
             bb = BB_WhitePawns & (~BB_7thRank);
             bb = Shift_N(bb) & BB_Empty;
-            foreach (var target in SerializeBitboard(bb))
+            SerializeBitboard(bb);
+            for (int i = 0; i < SerList.Count; i++)
             {
-                list.Add(MoveFactory.QuietMove(target - 8, target, Piece.WP));
+                Moves.Add(MoveFactory.QuietMove(SerList[i] - 8, SerList[i], Piece.WP));
             }
-
-            return list;
         }
-        internal List<Move> GetWhitePawnCaptures()
+        internal void GetWhitePawnCaptures()
         {
-            List<Move> list = new List<Move>();
-
-            ulong bb_captures = GetBB_WhitePawnAttacks() & BB_Black;
+            ulong bb_captures = BB_WhitePawnAttacks & BB_Black;
 
             //promotion captures
             ulong bb = bb_captures & BB_8thRank;
             ulong bb_fromwest = Shift_SW(bb) & BB_WhitePawns;
-            foreach (var source in SerializeBitboard(bb_fromwest))
+            SerializeBitboard(bb_fromwest);
+            for (int i = 0; i < SerList.Count; i++)
             {
-                int target = source + 9;
-                list.AddRange(MoveFactory.WhiteCapturePromotions(source, target, Mailbox[target]));
+                int target = SerList[i] + 9;
+                Moves.AddRange(MoveFactory.WhiteCapturePromotions(SerList[i], target, Mailbox[target]));
             }
             ulong bb_fromeast = Shift_SE(bb) & BB_WhitePawns;
-            foreach (var source in SerializeBitboard(bb_fromeast))
+            SerializeBitboard(bb_fromeast);
+            for (int i = 0; i < SerList.Count; i++)
             {
-                int target = source + 7;
-                list.AddRange(MoveFactory.WhiteCapturePromotions(source, target, Mailbox[target]));
+                int target = SerList[i] + 7;
+                Moves.AddRange(MoveFactory.WhiteCapturePromotions(SerList[i], target, Mailbox[target]));
             }
             //enpassant
             bb = BB_WhitePawns & (Shift_SW(BB_PossibleEPSquare) | Shift_SE(BB_PossibleEPSquare));
-            foreach (var source in SerializeBitboard(bb))
+            SerializeBitboard(bb);
+            for (int i = 0; i < SerList.Count; i++)
             {
-                list.Add(MoveFactory.WhiteEnPassant(source, PossibleEPSquare_Index));
+                Moves.Add(MoveFactory.WhiteEnPassant(SerList[i], PossibleEPSquare_Index));
             }
             //normal captures
             bb = bb_captures & (~BB_8thRank);
             bb_fromwest = Shift_SW(bb) & BB_WhitePawns;
-            foreach (var source in SerializeBitboard(bb_fromwest))
+            SerializeBitboard(bb_fromwest);
+            for (int i = 0; i < SerList.Count; i++)
             {
-                int target = source + 9;
-                list.Add(MoveFactory.Capture(source, target, Piece.WP, Mailbox[target]));
+                int target = SerList[i] + 9;
+                Moves.Add(MoveFactory.Capture(SerList[i], target, Piece.WP, Mailbox[target]));
             }
             bb_fromeast = Shift_SE(bb) & BB_WhitePawns;
-            foreach (var source in SerializeBitboard(bb_fromeast))
+            SerializeBitboard(bb_fromeast);
+            for (int i = 0; i < SerList.Count; i++)
             {
-                int target = source + 7;
-                list.Add(MoveFactory.Capture(source, target, Piece.WP, Mailbox[target]));
+                int target = SerList[i] + 7;
+                Moves.Add(MoveFactory.Capture(SerList[i], target, Piece.WP, Mailbox[target]));
             }
-
-            return list;
         }
-        internal List<Move> GetBlackPawnAdvances()
+        internal void GetBlackPawnAdvances()
         {
-            List<Move> list = new List<Move>();
             //double pushes
             ulong bb = BB_BlackPawns & BB_7thRank;
             bb = Shift_S(bb) & BB_Empty;
             bb = Shift_S(bb) & BB_Empty;
-            foreach (var target in SerializeBitboard(bb))
+            SerializeBitboard(bb);
+            for (int i = 0; i < SerList.Count; i++)
             {
-                list.Add(MoveFactory.BlackDoublePawnPush(target));
+                Moves.Add(MoveFactory.BlackDoublePawnPush(SerList[i]));
             }
             //promotions
             bb = BB_BlackPawns & BB_2ndRank;
             bb = Shift_S(bb) & BB_Empty;
-            foreach (var target in SerializeBitboard(bb))
+            SerializeBitboard(bb);
+            for (int i = 0; i < SerList.Count; i++)
             {
-                list.AddRange(MoveFactory.BlackPushPromotions(target + 8));
+                Moves.AddRange(MoveFactory.BlackPushPromotions(SerList[i]));
             }
             //quiet
             bb = BB_BlackPawns & (~BB_2ndRank);
             bb = Shift_S(bb) & BB_Empty;
-            foreach (var target in SerializeBitboard(bb))
+            SerializeBitboard(bb);
+            for (int i = 0; i < SerList.Count; i++)
             {
-                list.Add(MoveFactory.QuietMove(target + 8, target, Piece.BP));
+                Moves.Add(MoveFactory.QuietMove(SerList[i] + 8, SerList[i], Piece.BP));
             }
-
-            return list;
         }
-        internal List<Move> GetBlackPawnCaptures()
+        internal void GetBlackPawnCaptures()
         {
-            List<Move> list = new List<Move>();
-
-            ulong bb_captures = GetBB_BlackPawnAttacks() & BB_White;
+            ulong bb_captures = BB_BlackPawnAttacks & BB_White;
 
             //promotion captures
             ulong bb = bb_captures & BB_1stRank;
             ulong bb_fromwest = Shift_NW(bb) & BB_BlackPawns;
-            foreach (var source in SerializeBitboard(bb_fromwest))
+            SerializeBitboard(bb_fromwest);
+            for (int i = 0; i < SerList.Count; i++)
             {
-                int target = source - 7;
-                list.AddRange(MoveFactory.BlackCapturePromotions(source, target, Mailbox[target]));
+                int target = SerList[i] - 7;
+                Moves.AddRange(MoveFactory.BlackCapturePromotions(SerList[i], target, Mailbox[target]));
             }
             ulong bb_fromeast = Shift_NE(bb) & BB_BlackPawns;
-            foreach (var source in SerializeBitboard(bb_fromeast))
+            SerializeBitboard(bb_fromeast);
+            for (int i = 0; i < SerList.Count; i++)
             {
-                int target = source - 9;
-                list.AddRange(MoveFactory.BlackCapturePromotions(source, target, Mailbox[target]));
+                int target = SerList[i] - 9;
+                Moves.AddRange(MoveFactory.BlackCapturePromotions(SerList[i], target, Mailbox[target]));
             }
             //enpassant
             bb = BB_BlackPawns & (Shift_NW(BB_PossibleEPSquare) | Shift_NE(BB_PossibleEPSquare));
-            foreach (var source in SerializeBitboard(bb))
+            SerializeBitboard(bb);
+            for (int i = 0; i < SerList.Count; i++)
             {
-                list.Add(MoveFactory.BlackEnPassant(source, PossibleEPSquare_Index));
+                Moves.Add(MoveFactory.BlackEnPassant(SerList[i], PossibleEPSquare_Index));
             }
             //normal captures
             bb = bb_captures & (~BB_1stRank);
             bb_fromwest = Shift_NW(bb) & BB_BlackPawns;
-            foreach (var source in SerializeBitboard(bb_fromwest))
+            SerializeBitboard(bb_fromwest);
+            for (int i = 0; i < SerList.Count; i++)
             {
-                int target = source - 7;
-                list.Add(MoveFactory.Capture(source, target, Piece.BP, Mailbox[target]));
+                int target = SerList[i] - 7;
+                Moves.Add(MoveFactory.Capture(SerList[i], target, Piece.BP, Mailbox[target]));
             }
             bb_fromeast = Shift_NE(bb) & BB_BlackPawns;
-            foreach (var source in SerializeBitboard(bb_fromeast))
+            SerializeBitboard(bb_fromeast);
+            for (int i = 0; i < SerList.Count; i++)
             {
-                int target = source - 9;
-                list.Add(MoveFactory.Capture(source, target, Piece.BP, Mailbox[target]));
+                int target = SerList[i] - 9;
+                Moves.Add(MoveFactory.Capture(SerList[i], target, Piece.BP, Mailbox[target]));
             }
-
-            return list;
         }
 
-        internal List<Move> GetWhiteKnightMoves()
+        internal void GetWhiteKnightMoves()
         {
-            List<Move> list = new List<Move>();
+            SerializeBitboard(BB_WhiteKnights);
+            int[] knights = SerList.ToArray();
 
-            foreach (int knightindex in SerializeBitboard(BB_WhiteKnights))
+            for (int n = 0; n < knights.Length; n++)
             {
-                ulong moves = KnightMoves[knightindex];
-                foreach (int quietindex in SerializeBitboard(moves & BB_Empty))
+                ulong moves = KnightMoves[knights[n]];
+                SerializeBitboard(moves & BB_Empty);
+                for (int i = 0; i < SerList.Count; i++)
                 {
-                    list.Add(MoveFactory.QuietMove(knightindex, quietindex, Piece.WN));
+                    Moves.Add(MoveFactory.QuietMove(knights[n], SerList[i], Piece.WN));
                 }
-                foreach (int captureindex in SerializeBitboard(moves & BB_Black))
+                SerializeBitboard(moves & BB_Black);
+                for (int i = 0; i < SerList.Count; i++)
                 {
-                    list.Add(MoveFactory.Capture(knightindex, captureindex, Piece.WN, Mailbox[captureindex]));
+                    Moves.Add(MoveFactory.Capture(knights[n], SerList[i], Piece.WN, Mailbox[SerList[i]]));
                 }
             }
-
-            return list;
         }
-        internal List<Move> GetBlackKnightMoves()
+        internal void GetBlackKnightMoves()
         {
-            List<Move> list = new List<Move>();
+            SerializeBitboard(BB_BlackKnights);
+            int[] knights = SerList.ToArray();
 
-            foreach (int knightindex in SerializeBitboard(BB_BlackKnights))
+            for (int n = 0; n < knights.Length; n++)
             {
-                ulong moves = KnightMoves[knightindex];
-                foreach (int quietindex in SerializeBitboard(moves & BB_Empty))
+                ulong moves = KnightMoves[knights[n]];
+                SerializeBitboard(moves & BB_Empty);
+                for (int i = 0; i < SerList.Count; i++)
                 {
-                    list.Add(MoveFactory.QuietMove(knightindex, quietindex, Piece.BN));
+                    Moves.Add(MoveFactory.QuietMove(knights[n], SerList[i], Piece.BN));
                 }
-                foreach (int captureindex in SerializeBitboard(moves & BB_White))
+                SerializeBitboard(moves & BB_White);
+                for (int i = 0; i < SerList.Count; i++)
                 {
-                    list.Add(MoveFactory.Capture(knightindex, captureindex, Piece.BN, Mailbox[captureindex]));
+                    Moves.Add(MoveFactory.Capture(knights[n], SerList[i], Piece.BN, Mailbox[SerList[i]]));
                 }
             }
-
-            return list;
         }
 
-        internal List<Move> GetWhiteBishopMoves()
+        internal void GetWhiteBishopMoves()
         {
-            List<Move> list = new List<Move>();
+            SerializeBitboard(BB_WhiteBishops);
+            int[] bishops = SerList.ToArray();
 
-            foreach (int bishopindex in SerializeBitboard(BB_WhiteBishops))
+            for (int b = 0; b < bishops.Length; b++)
             {
-                ulong moves = AttackFill_Bishop((ulong)1 << bishopindex, BB_Empty);
-                foreach (int quietindex in SerializeBitboard(moves & BB_Empty))
+                ulong moves = AttackFill_Bishop((ulong)1 << bishops[b], BB_Empty);
+                SerializeBitboard(moves & BB_Empty);
+                for (int i = 0; i < SerList.Count; i++)
                 {
-                    list.Add(MoveFactory.QuietMove(bishopindex, quietindex, Piece.WB));
+                    Moves.Add(MoveFactory.QuietMove(bishops[b], SerList[i], Piece.WB));
                 }
-                foreach (int captureindex in SerializeBitboard(moves & BB_Black))
+                SerializeBitboard(moves & BB_Black);
+                for (int i = 0; i < SerList.Count; i++)
                 {
-                    list.Add(MoveFactory.Capture(bishopindex, captureindex, Piece.WB, Mailbox[captureindex]));
+                    Moves.Add(MoveFactory.Capture(bishops[b], SerList[i], Piece.WB, Mailbox[SerList[i]]));
                 }
             }
-
-            return list;
         }
-        internal List<Move> GetBlackBishopMoves()
+        internal void GetBlackBishopMoves()
         {
-            List<Move> list = new List<Move>();
+            SerializeBitboard(BB_BlackBishops);
+            int[] bishops = SerList.ToArray();
 
-            foreach (int bishopindex in SerializeBitboard(BB_BlackBishops))
+            for (int b = 0; b < bishops.Length; b++)
             {
-                ulong moves = AttackFill_Bishop((ulong)1 << bishopindex, BB_Empty);
-                foreach (int quietindex in SerializeBitboard(moves & BB_Empty))
+                ulong moves = AttackFill_Bishop((ulong)1 << bishops[b], BB_Empty);
+                SerializeBitboard(moves & BB_Empty);
+                for (int i = 0; i < SerList.Count; i++)
                 {
-                    list.Add(MoveFactory.QuietMove(bishopindex, quietindex, Piece.BB));
+                    Moves.Add(MoveFactory.QuietMove(bishops[b], SerList[i], Piece.BB));
                 }
-                foreach (int captureindex in SerializeBitboard(moves & BB_White))
+                SerializeBitboard(moves & BB_White);
+                for (int i = 0; i < SerList.Count; i++)
                 {
-                    list.Add(MoveFactory.Capture(bishopindex, captureindex, Piece.BB, Mailbox[captureindex]));
+                    Moves.Add(MoveFactory.Capture(bishops[b], SerList[i], Piece.BB, Mailbox[SerList[i]]));
                 }
             }
-
-            return list;
         }
 
-        internal List<Move> GetWhiteRookMoves()
+        internal void GetWhiteRookMoves()
         {
-            List<Move> list = new List<Move>();
+            SerializeBitboard(BB_WhiteRooks);
+            int[] rooks = SerList.ToArray();
 
-            foreach (int rookindex in SerializeBitboard(BB_WhiteRooks))
+            for (int r = 0; r < rooks.Length; r++)
             {
-                ulong moves = AttackFill_Rook((ulong)1 << rookindex, BB_Empty);
-                foreach (int quietindex in SerializeBitboard(moves & BB_Empty))
+                ulong moves = AttackFill_Rook((ulong)1 << rooks[r], BB_Empty);
+                SerializeBitboard(moves & BB_Empty);
+                for (int i = 0; i < SerList.Count; i++)
                 {
-                    list.Add(MoveFactory.QuietMove(rookindex, quietindex, Piece.WR));
+                    Moves.Add(MoveFactory.QuietMove(rooks[r], SerList[i], Piece.WR));
                 }
-                foreach (int captureindex in SerializeBitboard(moves & BB_Black))
+                SerializeBitboard(moves & BB_Black);
+                for (int i = 0; i < SerList.Count; i++)
                 {
-                    list.Add(MoveFactory.Capture(rookindex, captureindex, Piece.WR, Mailbox[captureindex]));
+                    Moves.Add(MoveFactory.Capture(rooks[r], SerList[i], Piece.WR, Mailbox[SerList[i]]));
                 }
             }
-
-            return list;
         }
-        internal List<Move> GetBlackRookMoves()
+        internal void GetBlackRookMoves()
         {
-            List<Move> list = new List<Move>();
+            SerializeBitboard(BB_BlackRooks);
+            int[] rooks = SerList.ToArray();
 
-            foreach (int rookindex in SerializeBitboard(BB_BlackRooks))
+            for (int r = 0; r < rooks.Length; r++)
             {
-                ulong moves = AttackFill_Rook((ulong)1 << rookindex, BB_Empty);
-                foreach (int quietindex in SerializeBitboard(moves & BB_Empty))
+                ulong moves = AttackFill_Rook((ulong)1 << rooks[r], BB_Empty);
+                SerializeBitboard(moves & BB_Empty);
+                for (int i = 0; i < SerList.Count; i++)
                 {
-                    list.Add(MoveFactory.QuietMove(rookindex, quietindex, Piece.BR));
+                    Moves.Add(MoveFactory.QuietMove(rooks[r], SerList[i], Piece.BR));
                 }
-                foreach (int captureindex in SerializeBitboard(moves & BB_White))
+                SerializeBitboard(moves & BB_White);
+                for (int i = 0; i < SerList.Count; i++)
                 {
-                    list.Add(MoveFactory.Capture(rookindex, captureindex, Piece.BR, Mailbox[captureindex]));
+                    Moves.Add(MoveFactory.Capture(rooks[r], SerList[i], Piece.BR, Mailbox[SerList[i]]));
                 }
             }
-
-            return list;
         }
 
-        internal List<Move> GetWhiteQueenMoves()
+        internal void GetWhiteQueenMoves()
         {
-            List<Move> list = new List<Move>();
+            SerializeBitboard(BB_WhiteQueens);
+            int[] queens = SerList.ToArray();
 
-            foreach (int queenindex in SerializeBitboard(BB_WhiteQueens))
+            for (int q = 0; q < queens.Length; q++)
             {
-                ulong moves = AttackFill_Queen((ulong)1 << queenindex, BB_Empty);
-                foreach (int quietindex in SerializeBitboard(moves & BB_Empty))
+                ulong moves = AttackFill_Queen((ulong)1 << queens[q], BB_Empty);
+                SerializeBitboard(moves & BB_Empty);
+                for (int i = 0; i < SerList.Count; i++)
                 {
-                    list.Add(MoveFactory.QuietMove(queenindex, quietindex, Piece.WQ));
+                    Moves.Add(MoveFactory.QuietMove(queens[q], SerList[i], Piece.WQ));
                 }
-                foreach (int captureindex in SerializeBitboard(moves & BB_Black))
+                SerializeBitboard(moves & BB_Black);
+                for (int i = 0; i < SerList.Count; i++)
                 {
-                    list.Add(MoveFactory.Capture(queenindex, captureindex, Piece.WQ, Mailbox[captureindex]));
+                    Moves.Add(MoveFactory.Capture(queens[q], SerList[i], Piece.WQ, Mailbox[SerList[i]]));
                 }
             }
-
-            return list;
         }
-        internal List<Move> GetBlackQueenMoves()
+        internal void GetBlackQueenMoves()
         {
-            List<Move> list = new List<Move>();
+            SerializeBitboard(BB_BlackQueens);
+            int[] queens = SerList.ToArray();
 
-            foreach (int queenindex in SerializeBitboard(BB_BlackQueens))
+            for (int q = 0; q < queens.Length; q++)
             {
-                ulong moves = AttackFill_Queen((ulong)1 << queenindex, BB_Empty);
-                foreach (int quietindex in SerializeBitboard(moves & BB_Empty))
+                ulong moves = AttackFill_Queen((ulong)1 << queens[q], BB_Empty);
+                SerializeBitboard(moves & BB_Empty);
+                for (int i = 0; i < SerList.Count; i++)
                 {
-                    list.Add(MoveFactory.QuietMove(queenindex, quietindex, Piece.BQ));
+                    Moves.Add(MoveFactory.QuietMove(queens[q], SerList[i], Piece.BQ));
                 }
-                foreach (int captureindex in SerializeBitboard(moves & BB_White))
+                SerializeBitboard(moves & BB_White);
+                for (int i = 0; i < SerList.Count; i++)
                 {
-                    list.Add(MoveFactory.Capture(queenindex, captureindex, Piece.BQ, Mailbox[captureindex]));
+                    Moves.Add(MoveFactory.Capture(queens[q], SerList[i], Piece.BQ, Mailbox[SerList[i]]));
                 }
             }
-
-            return list;
         }
 
-        internal List<Move> GetWhiteKingMoves()
+        internal void GetWhiteKingMoves()
         {
-            List<Move> list = new List<Move>();
-
             //castling
-            if (CanCastleWhiteShort && ((GetBB_AllBlackAttacks() & BB_e1f1g1) == 0) && ((BB_Occupied & BB_f1g1) == 0))
+            if (CanCastleWhiteShort && ((BB_AllBlackAttacks & BB_e1f1g1) == 0) && ((BB_Occupied & BB_f1g1) == 0))
             {
-                list.Add(MoveFactory.WhiteShortCastle());
+                Moves.Add(MoveFactory.WhiteShortCastle());
             }
-            if (CanCastleWhiteLong && ((GetBB_AllBlackAttacks() & BB_e1d1c1) == 0) && ((BB_Occupied & BB_d1c1b1) == 0))
+            if (CanCastleWhiteLong && ((BB_AllBlackAttacks & BB_e1d1c1) == 0) && ((BB_Occupied & BB_d1c1b1) == 0))
             {
-                list.Add(MoveFactory.WhiteLongCastle());
+                Moves.Add(MoveFactory.WhiteLongCastle());
             }
             //quiet+captures
-            foreach (int kingindex in SerializeBitboard(BB_WhiteKing))
+            int kingindex = BitScanForward(BB_WhiteKing);
+            ulong moves = KingMoves[kingindex];
+            SerializeBitboard(moves & BB_Empty);
+            for (int i = 0; i < SerList.Count; i++)
             {
-                ulong moves = KingMoves[kingindex];
-                foreach (int quietindex in SerializeBitboard(moves & BB_Empty))
-                {
-                    list.Add(MoveFactory.QuietMove(kingindex, quietindex, Piece.WK));
-                }
-                foreach (int captureindex in SerializeBitboard(moves & BB_Black))
-                {
-                    list.Add(MoveFactory.Capture(kingindex, captureindex, Piece.WK, Mailbox[captureindex]));
-                }
+                Moves.Add(MoveFactory.QuietMove(kingindex, SerList[i], Piece.WK));
             }
-
-            return list;
+            SerializeBitboard(moves & BB_Black);
+            for (int i = 0; i < SerList.Count; i++)
+            {
+                Moves.Add(MoveFactory.Capture(kingindex, SerList[i], Piece.WK, Mailbox[SerList[i]]));
+            }
         }
-        internal List<Move> GetBlackKingMoves()
+        internal void GetBlackKingMoves()
         {
-            List<Move> list = new List<Move>();
-
             //castling
-            if (CanCastleBlackShort && ((GetBB_AllWhiteAttacks() & BB_e8f8g8) == 0) && ((BB_Occupied & BB_f8g8) == 0))
+            if (CanCastleBlackShort && ((BB_AllWhiteAttacks & BB_e8f8g8) == 0) && ((BB_Occupied & BB_f8g8) == 0))
             {
-                list.Add(MoveFactory.BlackShortCastle());
+                Moves.Add(MoveFactory.BlackShortCastle());
             }
-            if (CanCastleBlackLong && ((GetBB_AllWhiteAttacks() & BB_e8d8c8) == 0) && ((BB_Occupied & BB_d8c8b8) == 0))
+            if (CanCastleBlackLong && ((BB_AllWhiteAttacks & BB_e8d8c8) == 0) && ((BB_Occupied & BB_d8c8b8) == 0))
             {
-                list.Add(MoveFactory.BlackLongCastle());
+                Moves.Add(MoveFactory.BlackLongCastle());
             }
             //quiet+captures
-            foreach (int kingindex in SerializeBitboard(BB_BlackKing))
+            int kingindex = BitScanForward(BB_BlackKing);
+            ulong moves = KingMoves[kingindex];
+            SerializeBitboard(moves & BB_Empty);
+            for (int i = 0; i < SerList.Count; i++)
             {
-                ulong moves = KingMoves[kingindex];
-                foreach (int quietindex in SerializeBitboard(moves & BB_Empty))
-                {
-                    list.Add(MoveFactory.QuietMove(kingindex, quietindex, Piece.BK));
-                }
-                foreach (int captureindex in SerializeBitboard(moves & BB_White))
-                {
-                    list.Add(MoveFactory.Capture(kingindex, captureindex, Piece.BK, Mailbox[captureindex]));
-                }
+                Moves.Add(MoveFactory.QuietMove(kingindex, SerList[i], Piece.BK));
             }
-
-            return list;
+            SerializeBitboard(moves & BB_White);
+            for (int i = 0; i < SerList.Count; i++)
+            {
+                Moves.Add(MoveFactory.Capture(kingindex, SerList[i], Piece.BK, Mailbox[SerList[i]]));
+            }
         }
 
         #endregion
 
         internal void SetStartingPosition()
         {
-            IsWhiteMove = true;
-
-            HalfmovesReversible = 0;
-            CurrentFullmove = 1;
-
-            BB_PossibleEPSquare = 0;
-            PossibleEPSquare_Index = -1;
-
-            BB_WhitePawns = 0x000000000000FF00;
-            BB_WhiteKnights = 0x0000000000000042;
-            BB_WhiteBishops = 0x0000000000000024;
-            BB_WhiteRooks = 0x0000000000000081;
-            BB_WhiteQueens = 0x0000000000000010;
-            BB_WhiteKing = 0x0000000000000008;
-            CanCastleWhiteShort = true;
-            CanCastleWhiteLong = true;
-
-            BB_BlackPawns = 0x00FF000000000000;
-            BB_BlackKnights = 0x4200000000000000;
-            BB_BlackBishops = 0x2400000000000000;
-            BB_BlackRooks = 0x8100000000000000;
-            BB_BlackQueens = 0x1000000000000000;
-            BB_BlackKing = 0x0800000000000000;
-            CanCastleBlackShort = true;
-            CanCastleBlackLong = true;
-
-            Mailbox = new Piece[]
-            {
-                WR, WN, WB, WQ, WK, WB, WN, WR,
-                WP, WP, WP, WP, WP, WP, WP, WP,
-                X, X, X, X, X, X, X, X,
-                X, X, X, X, X, X, X, X,
-                X, X, X, X, X, X, X, X,
-                X, X, X, X, X, X, X, X,
-                BP, BP, BP, BP, BP, BP, BP, BP,
-                BR, BN, BB, BQ, BK, BB, BN, BR
-            };
-
-            RefreshHelperBitboards();
+            LoadFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
         }
         internal string AsFEN()
         {
@@ -1195,9 +1216,10 @@ namespace KokosEngine
             if (depth == 0) return 1;
 
             long sum = 0;
-            var movelist = GetPseudoLegalMoves();
-            foreach (var move in movelist)
+            var movelist = GetPseudoLegalMoves().ToArray();
+            for (int i = 0; i < movelist.Length; i++)
             {
+                var move = movelist[i];
                 MakeMove(move);
                 if (!CanKingBeCaptured())
                 {

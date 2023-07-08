@@ -8,14 +8,14 @@ namespace KokosEngine
 {
     internal struct Move
     {
-        static readonly uint m_SquareFrom =     0b00000000_00000000_00000000_00111111;
-        static readonly uint m_SquareTo =       0b00000000_00000000_00001111_11000000;
-        static readonly uint m_Promotion =      0b00000000_00000000_10000000_00000000;
-        static readonly uint m_Capture =        0b00000000_00000000_01000000_00000000;
-        static readonly uint m_Special =        0b00000000_00000000_00110000_00000000;
-        static readonly uint m_PieceMoved =     0b00000000_00001111_00000000_00000000;
-        static readonly uint m_PieceCaptured =  0b00000000_11110000_00000000_00000000;
-        static readonly uint m_MoveType =       0b00000000_00000000_11110000_00000000;
+        static readonly uint m_SquareFrom = 0b00000000_00000000_00000000_00111111;
+        static readonly uint m_SquareTo = 0b00000000_00000000_00001111_11000000;
+        static readonly uint m_Promotion = 0b00000000_00000000_10000000_00000000;
+        static readonly uint m_Capture = 0b00000000_00000000_01000000_00000000;
+        static readonly uint m_Special = 0b00000000_00000000_00110000_00000000;
+        static readonly uint m_PieceMoved = 0b00000000_00001111_00000000_00000000;
+        static readonly uint m_PieceCaptured = 0b00000000_11110000_00000000_00000000;
+        static readonly uint m_MoveType = 0b00000000_00000000_11110000_00000000;
 
         private uint _data;
 
@@ -103,6 +103,7 @@ namespace KokosEngine
         {
             get
             {
+                if (!IsCapture) return Piece.X;
                 return (Piece)((_data & m_PieceCaptured) >> 20);
             }
             set
@@ -125,6 +126,7 @@ namespace KokosEngine
         {
             get
             {
+                if (!IsPromotion) return Piece.X;
                 int index = Special + 1;
                 if (PieceMoved.IsBlack()) index += 6;
                 return (Piece)index;

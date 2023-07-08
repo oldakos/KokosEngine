@@ -315,22 +315,19 @@ namespace KokosEngine
         0x40C0000000000000
         };
 
-        static internal List<int> SerializeBitboard(ulong bb)
+        static internal void SerializeBitboard(ulong bb, List<int> list)
         {
-            var list = new List<int>();
             while (bb != 0)
             {
                 int index = BitScanForward(bb);
                 list.Add(index);
                 bb &= bb - 1;
             }
-            return list;
         }
 
 
         static internal int BitScanForward(ulong bb)
         {
-            if (bb == 0) throw new ArgumentException("you bitscanned a zero bitboard");
             const ulong debruijn64 = 0x03f79d71b4cb0a89;
             ulong negative = (ulong)(-(long)bb);
             return index64[((bb & negative) * debruijn64) >> 58];
@@ -381,7 +378,8 @@ namespace KokosEngine
         {
             StringBuilder sb = new StringBuilder();
 
-            List<int> indices = SerializeBitboard(bb);
+            List<int> indices = new List<int>();
+            SerializeBitboard(bb, indices);
             for (int rank = 7; rank >= 0; rank--)
             {
                 for (int file = 0; file < 8; file++)
