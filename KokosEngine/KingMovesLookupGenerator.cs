@@ -3,10 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using static KokosEngine.Util;
 
 namespace KokosEngine
 {
+    /// <summary>
+    /// Generates the code for a static readonly array of Bitboards that represent king moves from each square, indexed by Coordinate index
+    /// </summary>
     internal static class KingMovesLookupGenerator
     {
         internal static string GenerateArraySourceCode()
@@ -27,8 +29,8 @@ namespace KokosEngine
         }
         internal static ulong GenerateBitboard(int index)
         {
-            ulong s = (ulong)1 << index;
-            ulong result = (Shift_N(s)) | (Shift_NE(s)) | (Shift_E(s)) | (Shift_SE(s)) | (Shift_S(s)) | (Shift_SW(s)) | (Shift_W(s)) | (Shift_NW(s));
+            Bitboard s = (ulong)1 << index;
+            ulong result = s.Shift_N() | s.Shift_NE() | s.Shift_E() | s.Shift_SE() | s.Shift_S() | s.Shift_SW() | s.Shift_W() | s.Shift_NW();
             return result;
         }
         internal static void ToConsole()

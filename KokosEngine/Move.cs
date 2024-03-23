@@ -103,7 +103,7 @@ namespace KokosEngine
         {
             get
             {
-                if (!IsCapture) return Piece.X;
+                if (!IsCapture) return Piece.None;
                 return (Piece)((_data & m_PieceCaptured) >> 20);
             }
             set
@@ -126,7 +126,7 @@ namespace KokosEngine
         {
             get
             {
-                if (!IsPromotion) return Piece.X;
+                if (!IsPromotion) return Piece.None;
                 int index = Special + 1;
                 if (PieceMoved.IsBlack()) index += 6;
                 return (Piece)index;
