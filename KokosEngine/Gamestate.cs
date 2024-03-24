@@ -141,6 +141,9 @@ namespace KokosEngine
         internal Gamestate LoadFEN(string fen)
         {
             int i = 0;
+
+            BB_Empty = Bitboard.Empty.Inverse(); //every square is empty before we set pieces
+
             //section: piece placement
             Queue<Piece> queue = new Queue<Piece>();
             while (fen[i] != ' ')
@@ -241,7 +244,7 @@ namespace KokosEngine
             IncrementFullmoveCounter();
             SwitchPlayerToMove();
 
-            RefreshAllHelperBitboards();
+            //RefreshAllHelperBitboards();
         }
 
         internal void UnmakeMove()
@@ -255,7 +258,7 @@ namespace KokosEngine
             RestoreIrreversibles(move);
             RevertPiecesState(move);
 
-            RefreshAllHelperBitboards();
+            //RefreshAllHelperBitboards();
         }
 
         #region Make/Unmake Move Helper Methods
@@ -307,7 +310,14 @@ namespace KokosEngine
         {
             ClearBitInAllBitboards(coord);  //make sure that we don't store two pieces on one coordinate at the same time
             Bitboard mask = new Bitboard(coord);    //get coord as bitboard
-            Bitboards[(int)piece] = Bitboards[(int)piece].Union(mask);  //union existing bitboard with the new coord
+            Bitboards[(int)piece] = Bitboards[(int)piece].Union(mask);  //set coord in the piece's bitboard
+            BB_Occupied = BB_Occupied.Union(mask); //also set coord in "occupied"
+            BB_Empty = BB_Empty.Overlap(mask.Inverse()); //clear coord from "empty"
+
+            //set the coord in the piece's color's bitboard
+            if (piece.IsWhite()) BB_White = BB_White.Union(mask);
+            else BB_Black = BB_Black.Union(mask);
+
             Mailbox[coord] = piece;
         }
         internal void ClearCoordinate(Coordinate coord)
@@ -322,22 +332,28 @@ namespace KokosEngine
             {
                 Bitboards[i] = Bitboards[i].Overlap(mask);  //update each bitboard to overlap with the new "not that coord" bitboard
             }
+            BB_Empty = BB_Empty.Union(mask.Inverse()); //also SET the cleared coord in "empty"
+
+            //clear coord from "occupied", "White" and "Black"
+            BB_Occupied = BB_Occupied.Overlap(mask); 
+            BB_White = BB_White.Overlap(mask);
+            BB_Black = BB_Black.Overlap(mask);
         }
 
         internal void RefreshAllHelperBitboards()
         {
-            BB_White = Bitboard.Empty;
-            for (int i = 0; i < 6; i++)
-            {
-                BB_White = BB_White.Union(Bitboards[i]);
-            }
-            BB_Black = Bitboard.Empty;
-            for (int i = 6; i < 12; i++)
-            {
-                BB_Black = BB_Black.Union(Bitboards[i]);
-            }
-            BB_Occupied = BB_White.Union(BB_Black);
-            BB_Empty = BB_Occupied.Inverse();
+            //BB_White = Bitboard.Empty;
+            //for (int i = 0; i < 6; i++)
+            //{
+            //    BB_White = BB_White.Union(Bitboards[i]);
+            //}
+            //BB_Black = Bitboard.Empty;
+            //for (int i = 6; i < 12; i++)
+            //{
+            //    BB_Black = BB_Black.Union(Bitboards[i]);
+            //}
+            //BB_Occupied = BB_White.Union(BB_Black);
+            //BB_Empty = BB_Occupied.Inverse();
 
             BB_WhiteKnightAttacks = GetBB_WhiteKnightAttacks();
             BB_BlackKnightAttacks = GetBB_BlackKnightAttacks();
@@ -361,11 +377,55 @@ namespace KokosEngine
 
         internal bool IsWhiteInCheck()
         {
-            return (BB_AllBlackAttacks & BB_WhiteKing) != 0;
+            Coordinate kingPosition = BB_WhiteKing.BitScanForward();
+
+            //checked by the other king? that's possible under pseudolegal generation
+            Bitboard potentialAttackers = Bitboard.KingMoves[kingPosition];
+            if(potentialAttackers.Overlap(BB_BlackKing) != 0) return true;
+
+            //by a knight?            
+            potentialAttackers = Bitboard.KnightMoves[kingPosition];
+            if (potentialAttackers.Overlap(BB_BlackKnights) != 0) return true;
+
+            //a pawn?
+            potentialAttackers = BB_WhiteKing.Shift_NE().Union(BB_WhiteKing.Shift_NW());
+            if (potentialAttackers.Overlap(BB_BlackPawns) != 0) return true;
+
+            //diagonally by a bishop or queen?
+            potentialAttackers = BB_WhiteKing.AttackFill_Bishop(BB_Empty);
+            if (potentialAttackers.Overlap(BB_BlackBishops.Union(BB_BlackQueens)) != 0) return true;
+
+            //orthogonally by a rook or queen?
+            potentialAttackers = BB_WhiteKing.AttackFill_Rook(BB_Empty);
+            if (potentialAttackers.Overlap(BB_BlackRooks.Union(BB_BlackQueens)) != 0) return true;
+
+            return false;
         }
         internal bool IsBlackInCheck()
         {
-            return (BB_AllWhiteAttacks & BB_BlackKing) != 0;
+            Coordinate kingPosition = BB_BlackKing.BitScanForward();
+
+            //checked by the other king? that's possible under pseudolegal generation
+            Bitboard potentialAttackers = Bitboard.KingMoves[kingPosition];
+            if (potentialAttackers.Overlap(BB_WhiteKing) != 0) return true;
+
+            //by a knight?            
+            potentialAttackers = Bitboard.KnightMoves[kingPosition];
+            if (potentialAttackers.Overlap(BB_WhiteKnights) != 0) return true;
+
+            //a pawn?
+            potentialAttackers = BB_BlackKing.Shift_NE().Union(BB_BlackKing.Shift_NW());
+            if (potentialAttackers.Overlap(BB_WhitePawns) != 0) return true;
+
+            //diagonally by a bishop or queen?
+            potentialAttackers = BB_BlackKing.AttackFill_Bishop(BB_Empty);
+            if (potentialAttackers.Overlap(BB_WhiteBishops.Union(BB_WhiteQueens)) != 0) return true;
+
+            //orthogonally by a rook or queen?
+            potentialAttackers = BB_BlackKing.AttackFill_Rook(BB_Empty);
+            if (potentialAttackers.Overlap(BB_WhiteRooks.Union(BB_WhiteQueens)) != 0) return true;
+
+            return false;
         }
         internal bool CanKingBeCaptured()
         {
@@ -382,6 +442,7 @@ namespace KokosEngine
 
         internal List<IMove> GetPseudoLegalMoves()
         {
+            RefreshAllHelperBitboards();
             _moves.Clear();
             if (IsWhiteMove)
             {
