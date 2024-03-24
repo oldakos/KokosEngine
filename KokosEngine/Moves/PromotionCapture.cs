@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace KokosEngine.Moves.Black
+namespace KokosEngine.Moves
 {
     internal class PromotionCapture : IMove
     {
@@ -16,13 +16,22 @@ namespace KokosEngine.Moves.Black
 
         public static PromotionCapture[] GetAll(IrreversibleInformation irreversibles, Coordinate coordFrom, Coordinate coordTo, Piece pieceCaptured)
         {
-            return new PromotionCapture[]
-            {
+            if (coordTo.GetRankIndex() > 0)
+                return new PromotionCapture[]
+                {
+                new PromotionCapture(irreversibles,coordFrom,coordTo, Piece.WhiteKnight, pieceCaptured),
+                new PromotionCapture(irreversibles,coordFrom,coordTo, Piece.WhiteBishop, pieceCaptured),
+                new PromotionCapture(irreversibles,coordFrom,coordTo, Piece.WhiteRook, pieceCaptured),
+                new PromotionCapture(irreversibles,coordFrom,coordTo, Piece.WhiteQueen, pieceCaptured)
+                };
+            else
+                return new PromotionCapture[]
+                {
                 new PromotionCapture(irreversibles,coordFrom,coordTo, Piece.BlackKnight, pieceCaptured),
                 new PromotionCapture(irreversibles,coordFrom,coordTo, Piece.BlackBishop, pieceCaptured),
                 new PromotionCapture(irreversibles,coordFrom,coordTo, Piece.BlackRook, pieceCaptured),
                 new PromotionCapture(irreversibles,coordFrom,coordTo, Piece.BlackQueen, pieceCaptured)
-            };
+                };
         }
         public PromotionCapture(IrreversibleInformation irreversibles, Coordinate coordFrom, Coordinate coordTo, Piece piecePromotedTo, Piece pieceCaptured)
         {
@@ -32,6 +41,8 @@ namespace KokosEngine.Moves.Black
             this.piecePromotedTo = piecePromotedTo;
             this.pieceCaptured = pieceCaptured;
         }
+
+        private bool IsWhite() => coordTo.GetRankIndex() > 0;
 
         string IMove.GetPieceNotation()
         {
@@ -46,10 +57,10 @@ namespace KokosEngine.Moves.Black
         IrreversibleInformation IMove.IrreversiblesAfterDo()
         {
             return new IrreversibleInformation(
-                    (coordTo == Coordinate.e1 || coordTo == Coordinate.h1) ? false : irrBefore.CastleWhiteShort,
-                    (coordTo == Coordinate.e1 || coordTo == Coordinate.a1) ? false : irrBefore.CastleWhiteLong,
-                    irrBefore.CastleBlackShort,
-                    irrBefore.CastleBlackLong,
+                    coordTo.ImpactsCastleWhiteShort() ? false : irrBefore.CastleWhiteShort,
+                    coordTo.ImpactsCastleWhiteLong() ? false : irrBefore.CastleWhiteLong,
+                    coordTo.ImpactsCastleBlackShort() ? false : irrBefore.CastleBlackShort,
+                    coordTo.ImpactsCastleBlackLong() ? false : irrBefore.CastleBlackLong,
                     Coordinate.None,
                     0);
         }
@@ -70,11 +81,28 @@ namespace KokosEngine.Moves.Black
 
         IEnumerable<Square> IMove.UpdatesAfterUndo()
         {
-            return new Square[]
-            {
+            if (IsWhite())
+                return new Square[]
+                {
+                new Square(coordTo, pieceCaptured),
+                new Square(coordFrom, Piece.WhitePawn)
+                };
+            else
+                return new Square[]
+                {
                 new Square(coordTo, pieceCaptured),
                 new Square(coordFrom, Piece.BlackPawn)
-            };
+                };
+        }
+
+        Coordinate IMove.CoordinateFrom()
+        {
+            return coordFrom;
+        }
+
+        Coordinate IMove.CoordinateTo()
+        {
+            return coordTo;
         }
     }
 }

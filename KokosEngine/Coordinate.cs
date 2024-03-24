@@ -127,6 +127,28 @@ namespace KokosEngine
         internal Coordinate KnightNNW { get { return new Coordinate(_index + 15); } }
         #endregion
 
+        internal bool ImpactsCastleWhiteShort() => this == e1 || this == h1;
+        internal bool ImpactsCastleWhiteLong() => this == e1 || this == a1;
+        internal bool ImpactsCastleBlackShort() => this == e8 || this == h8;
+        internal bool ImpactsCastleBlackLong() => this == e8 || this == a8;
+        internal Coordinate Forward(Color color) => color == Color.White ? North : South;
+        internal Coordinate ForwardEast(Color color) => color == Color.White ? NE : SE;
+        internal Coordinate ForwardWest(Color color) => color == Color.White ? NW : SW;
+        internal Coordinate Backward(Color color) => color == Color.White ? South : North;
+        internal Coordinate BackwardEast(Color color) => color == Color.White ? SE : NE;
+        internal Coordinate BackwardWest(Color color) => color == Color.White ? SW : NW;
+
+        internal bool IsNorthOf(Coordinate otherCoord) => this._index / 8 > otherCoord._index / 8;
+
+        /// <summary>
+        /// 0-based. The A-file is 0, the H-file is 7.
+        /// </summary>
+        internal int GetFileIndex() => _index % 8;
+        /// <summary>
+        /// 0-based. The first rank is 0, the eighth rank is 7.
+        /// </summary>
+        internal int GetRankIndex() => _index / 8;
+
         public override string ToString()
         {
             if (_index > 63) return "-";
@@ -139,14 +161,12 @@ namespace KokosEngine
         internal string GetFileString()
         {
             if (_index > 63) return "-";
-            int fileindex = _index % 8;
-            return new string(new char[] { (char)('a' + fileindex) });
+            return new string(new char[] { (char)('a' + GetFileIndex()) });
         }
         internal string GetRankString()
         {
             if (_index > 63) return "-";
-            int rankindex = _index / 8;
-            return new string(new char[] { (char)('1' + rankindex) });
+            return new string(new char[] { (char)('1' + GetRankIndex()) });
         }
     }
 }

@@ -64,5 +64,9 @@ namespace KokosEngine
         {
             return ((int)piece >= 6) && piece != Piece.None;
         }
+        internal static bool IsPawn(this Piece piece)
+        {
+            return piece == WhitePawn || piece == BlackPawn;
+        }
     }
 }

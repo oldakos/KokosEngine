@@ -14,12 +14,14 @@ namespace KokosEngine
         private List<IMove> _moves = new List<IMove>(128);
 
         #region Basic Data
-
-        internal Color PlayerToMove;
+        /// <summary>
+        /// Player to move
+        /// </summary>
+        internal Color P;
         internal bool IsWhiteMove
         {
-            get { return PlayerToMove == Color.White; }
-            set { PlayerToMove = value ? Color.White : Color.Black; }
+            get { return P == Color.White; }
+            set { P = value ? Color.White : Color.Black; }
         }
         internal bool IsBlackMove
         {
@@ -102,22 +104,28 @@ namespace KokosEngine
         internal Bitboard BB_Empty { get; set; }
         internal Bitboard BB_White { get; set; }
         internal Bitboard BB_Black { get; set; }
+        /// <summary>
+        /// This should only get calculated if all other conditions allow castling
+        /// </summary>
+        internal Bitboard BB_EnemyAttacks { get; set; }
 
-        internal Bitboard BB_AllWhiteAttacks { get; set; }
-        internal Bitboard BB_AllBlackAttacks { get; set; }
-        internal Bitboard BB_WhitePawnAttacks { get; set; }
-        internal Bitboard BB_WhiteKnightAttacks { get; set; }
-        internal Bitboard BB_WhiteBishopAttacks { get; set; }
-        internal Bitboard BB_WhiteRookAttacks { get; set; }
-        internal Bitboard BB_WhiteQueenAttacks { get; set; }
-        internal Bitboard BB_WhiteKingAttacks { get; set; }
-        internal Bitboard BB_BlackPawnAttacks { get; set; }
-        internal Bitboard BB_BlackKnightAttacks { get; set; }
-        internal Bitboard BB_BlackBishopAttacks { get; set; }
-        internal Bitboard BB_BlackRookAttacks { get; set; }
-        internal Bitboard BB_BlackQueenAttacks { get; set; }
-        internal Bitboard BB_BlackKingAttacks { get; set; }
+        #endregion
+        #region Ally/Enemy Bitboard Properties - returned value depends on whose move it is
 
+        internal Bitboard BB_AllyPawns => IsWhiteMove ? BB_WhitePawns : BB_BlackPawns;
+        internal Bitboard BB_AllyKnights => IsWhiteMove ? BB_WhiteKnights : BB_BlackKnights;
+        internal Bitboard BB_AllyBishops => IsWhiteMove ? BB_WhiteBishops : BB_BlackBishops;
+        internal Bitboard BB_AllyRooks => IsWhiteMove ? BB_WhiteRooks : BB_BlackRooks;
+        internal Bitboard BB_AllyQueens => IsWhiteMove ? BB_WhiteQueens : BB_BlackQueens;
+        internal Bitboard BB_AllyKing => IsWhiteMove ? BB_WhiteKing : BB_BlackKing;
+        internal Bitboard BB_Allies => IsWhiteMove ? BB_White : BB_Black;
+        internal Bitboard BB_EnemyPawns => IsWhiteMove ? BB_BlackPawns : BB_WhitePawns;
+        internal Bitboard BB_EnemyKnights => IsWhiteMove ? BB_BlackKnights : BB_WhiteKnights;
+        internal Bitboard BB_EnemyBishops => IsWhiteMove ? BB_BlackBishops : BB_WhiteBishops;
+        internal Bitboard BB_EnemyRooks => IsWhiteMove ? BB_BlackRooks : BB_WhiteRooks;
+        internal Bitboard BB_EnemyQueens => IsWhiteMove ? BB_BlackQueens : BB_WhiteQueens;
+        internal Bitboard BB_EnemyKing => IsWhiteMove ? BB_BlackKing : BB_WhiteKing;
+        internal Bitboard BB_Enemies => IsWhiteMove ? BB_Black : BB_White;
 
         #endregion
 
@@ -231,7 +239,6 @@ namespace KokosEngine
             CurrentFullmove = int.Parse(sb.ToString());
 
             Irreversibles = new IrreversibleInformation(irr_cws, irr_cwl, irr_cbs, irr_cbl, irr_ep, irr_hm);
-            RefreshAllHelperBitboards();
 
             return this;
         }
@@ -243,8 +250,6 @@ namespace KokosEngine
             UpdateIrreversibles(move);
             IncrementFullmoveCounter();
             SwitchPlayerToMove();
-
-            //RefreshAllHelperBitboards();
         }
 
         internal void UnmakeMove()
@@ -257,8 +262,6 @@ namespace KokosEngine
             DecrementFullmoveCounter();
             RestoreIrreversibles(move);
             RevertPiecesState(move);
-
-            //RefreshAllHelperBitboards();
         }
 
         #region Make/Unmake Move Helper Methods
@@ -335,216 +338,127 @@ namespace KokosEngine
             BB_Empty = BB_Empty.Union(mask.Inverse()); //also SET the cleared coord in "empty"
 
             //clear coord from "occupied", "White" and "Black"
-            BB_Occupied = BB_Occupied.Overlap(mask); 
+            BB_Occupied = BB_Occupied.Overlap(mask);
             BB_White = BB_White.Overlap(mask);
             BB_Black = BB_Black.Overlap(mask);
         }
 
         internal void RefreshAllHelperBitboards()
         {
-            //BB_White = Bitboard.Empty;
-            //for (int i = 0; i < 6; i++)
-            //{
-            //    BB_White = BB_White.Union(Bitboards[i]);
-            //}
-            //BB_Black = Bitboard.Empty;
-            //for (int i = 6; i < 12; i++)
-            //{
-            //    BB_Black = BB_Black.Union(Bitboards[i]);
-            //}
-            //BB_Occupied = BB_White.Union(BB_Black);
-            //BB_Empty = BB_Occupied.Inverse();
-
-            BB_WhiteKnightAttacks = GetBB_WhiteKnightAttacks();
-            BB_BlackKnightAttacks = GetBB_BlackKnightAttacks();
-            BB_WhitePawnAttacks = GetBB_WhitePawnAttacks();
-            BB_BlackPawnAttacks = GetBB_BlackPawnAttacks();
-            BB_WhiteKingAttacks = GetBB_WhiteKingAttacks();
-            BB_BlackKingAttacks = GetBB_BlackKingAttacks();
-            BB_WhiteBishopAttacks = GetBB_WhiteBishopAttacks();
-            BB_WhiteRookAttacks = GetBB_WhiteRookAttacks();
-            BB_WhiteQueenAttacks = GetBB_WhiteQueenAttacks();
-            BB_BlackBishopAttacks = GetBB_BlackBishopAttacks();
-            BB_BlackRookAttacks = GetBB_BlackRookAttacks();
-            BB_BlackQueenAttacks = GetBB_BlackQueenAttacks();
-            BB_AllWhiteAttacks = GetBB_AllWhiteAttacks();
-            BB_AllBlackAttacks = GetBB_AllBlackAttacks();
-
             BB_PossibleEP = Irreversibles.EPBitboard;
+            BB_EnemyAttacks = 0;
         }
 
         #endregion
 
-        internal bool IsWhiteInCheck()
+        internal bool IsPlayerToMoveInCheck()
         {
-            Coordinate kingPosition = BB_WhiteKing.BitScanForward();
+            Coordinate kingPosition = BB_AllyKing.BitScanForward();
 
             //checked by the other king? that's possible under pseudolegal generation
             Bitboard potentialAttackers = Bitboard.KingMoves[kingPosition];
-            if(potentialAttackers.Overlap(BB_BlackKing) != 0) return true;
+            if (potentialAttackers.Overlap(BB_EnemyKing) != 0) return true;
 
             //by a knight?            
             potentialAttackers = Bitboard.KnightMoves[kingPosition];
-            if (potentialAttackers.Overlap(BB_BlackKnights) != 0) return true;
+            if (potentialAttackers.Overlap(BB_EnemyKnights) != 0) return true;
 
             //a pawn?
-            potentialAttackers = BB_WhiteKing.Shift_NE().Union(BB_WhiteKing.Shift_NW());
-            if (potentialAttackers.Overlap(BB_BlackPawns) != 0) return true;
+            potentialAttackers = BB_AllyKing.Shift_ForwardEast(P).Union(BB_AllyKing.Shift_ForwardWest(P));
+            if (potentialAttackers.Overlap(BB_EnemyPawns) != 0) return true;
 
             //diagonally by a bishop or queen?
-            potentialAttackers = BB_WhiteKing.AttackFill_Bishop(BB_Empty);
-            if (potentialAttackers.Overlap(BB_BlackBishops.Union(BB_BlackQueens)) != 0) return true;
+            potentialAttackers = BB_AllyKing.AttackFill_Bishop(BB_Empty);
+            if (potentialAttackers.Overlap(BB_EnemyBishops.Union(BB_EnemyQueens)) != 0) return true;
 
             //orthogonally by a rook or queen?
-            potentialAttackers = BB_WhiteKing.AttackFill_Rook(BB_Empty);
-            if (potentialAttackers.Overlap(BB_BlackRooks.Union(BB_BlackQueens)) != 0) return true;
+            potentialAttackers = BB_AllyKing.AttackFill_Rook(BB_Empty);
+            if (potentialAttackers.Overlap(BB_EnemyRooks.Union(BB_EnemyQueens)) != 0) return true;
 
             return false;
         }
-        internal bool IsBlackInCheck()
-        {
-            Coordinate kingPosition = BB_BlackKing.BitScanForward();
-
-            //checked by the other king? that's possible under pseudolegal generation
-            Bitboard potentialAttackers = Bitboard.KingMoves[kingPosition];
-            if (potentialAttackers.Overlap(BB_WhiteKing) != 0) return true;
-
-            //by a knight?            
-            potentialAttackers = Bitboard.KnightMoves[kingPosition];
-            if (potentialAttackers.Overlap(BB_WhiteKnights) != 0) return true;
-
-            //a pawn?
-            potentialAttackers = BB_BlackKing.Shift_NE().Union(BB_BlackKing.Shift_NW());
-            if (potentialAttackers.Overlap(BB_WhitePawns) != 0) return true;
-
-            //diagonally by a bishop or queen?
-            potentialAttackers = BB_BlackKing.AttackFill_Bishop(BB_Empty);
-            if (potentialAttackers.Overlap(BB_WhiteBishops.Union(BB_WhiteQueens)) != 0) return true;
-
-            //orthogonally by a rook or queen?
-            potentialAttackers = BB_BlackKing.AttackFill_Rook(BB_Empty);
-            if (potentialAttackers.Overlap(BB_WhiteRooks.Union(BB_WhiteQueens)) != 0) return true;
-
-            return false;
-        }
+        /// <summary>
+        /// Return true if player to move can capture his opponent's king
+        /// </summary>
         internal bool CanKingBeCaptured()
         {
-            if (IsWhiteMove && IsBlackInCheck())
-            {
-                return true;
-            }
-            if (IsBlackMove && IsWhiteInCheck())
-            {
-                return true;
-            }
-            return false;
+            SwitchPlayerToMove();
+            bool result = IsPlayerToMoveInCheck();
+            SwitchPlayerToMove();
+            return result;
         }
 
         internal List<IMove> GetPseudoLegalMoves()
         {
             RefreshAllHelperBitboards();
             _moves.Clear();
-            if (IsWhiteMove)
-            {
-                GetWhitePawnMoves();
-                GetWhiteKnightMoves();
-                GetWhiteBishopMoves();
-                GetWhiteRookMoves();
-                GetWhiteQueenMoves();
-                GetWhiteKingMoves();
-            }
-            else
-            {
-                GetBlackPawnMoves();
-                GetBlackKnightMoves();
-                GetBlackBishopMoves();
-                GetBlackRookMoves();
-                GetBlackQueenMoves();
-                GetBlackKingMoves();
-            }
+            GeneratePawnMoves();
+            GenerateKnightMoves();
+            GenerateBishopMoves();
+            GenerateRookMoves();
+            GenerateQueenMoves();
+            GenerateKingMoves();
             return _moves;
         }
 
         #region Move Generation        
 
-        internal Bitboard GetBB_AllWhiteAttacks()
+        internal Bitboard GetAllAllyAttacks()
         {
-            return BB_WhitePawnAttacks | BB_WhiteKnightAttacks | BB_WhiteBishopAttacks | BB_WhiteRookAttacks | BB_WhiteQueenAttacks | BB_WhiteKingAttacks;
+            return
+                GetPawnAttacks(BB_AllyPawns, P)
+                | GetKnightAttacks(BB_AllyKnights)
+                | GetBishopAttacks(BB_AllyBishops)
+                | GetRookAttacks(BB_AllyRooks)
+                | GetQueenAttacks(BB_AllyQueens)
+                | GetKingAttacks(BB_AllyKing);
         }
-        internal Bitboard GetBB_AllBlackAttacks()
+        internal Bitboard GetAllEnemyAttacks()
         {
-            return BB_BlackPawnAttacks | BB_BlackKnightAttacks | BB_BlackBishopAttacks | BB_BlackRookAttacks | BB_BlackQueenAttacks | BB_BlackKingAttacks;
+            if (BB_EnemyAttacks == 0)
+            {
+                BB_EnemyAttacks =
+                    GetPawnAttacks(BB_EnemyPawns, IsWhiteMove ? Color.Black : Color.White)
+                    | GetKnightAttacks(BB_EnemyKnights)
+                    | GetBishopAttacks(BB_EnemyBishops)
+                    | GetRookAttacks(BB_EnemyRooks)
+                    | GetQueenAttacks(BB_EnemyQueens)
+                    | GetKingAttacks(BB_EnemyKing);
+            }
+            return BB_EnemyAttacks;
         }
-        internal Bitboard GetBB_WhitePawnAttacks()
+        internal Bitboard GetPawnAttacks(Bitboard bb, Color c)
         {
-            Bitboard bb = BB_WhitePawns.Shift_NW();
-            bb |= BB_WhitePawns.Shift_NE();
-            return bb;
+            Bitboard targets = bb.Shift_ForwardWest(c);
+            targets |= bb.Shift_ForwardEast(c);
+            return targets;
         }
-        internal Bitboard GetBB_BlackPawnAttacks()
-        {
-            Bitboard bb = BB_BlackPawns.Shift_SW();
-            bb |= BB_BlackPawns.Shift_SE();
-            return bb;
-        }
-        internal Bitboard GetBB_WhiteKnightAttacks()
+        internal Bitboard GetKnightAttacks(Bitboard bb)
         {
             Bitboard result = Bitboard.Empty;
-            var coords = BB_WhiteKnights.Serialize();
+            var coords = bb.Serialize();
             foreach (var coord in coords)
             {
                 result |= Bitboard.KnightMoves[coord];
             }
             return result;
         }
-        internal Bitboard GetBB_BlackKnightAttacks()
+        internal Bitboard GetBishopAttacks(Bitboard bb)
+        {
+            return bb.AttackFill_Bishop(BB_Empty);
+        }
+        internal Bitboard GetRookAttacks(Bitboard bb)
+        {
+            return bb.AttackFill_Rook(BB_Empty);
+        }
+        internal Bitboard GetQueenAttacks(Bitboard bb)
+        {
+            return bb.AttackFill_Queen(BB_Empty);
+        }
+        internal Bitboard GetKingAttacks(Bitboard bb)
         {
             Bitboard result = Bitboard.Empty;
-            var coords = BB_BlackKnights.Serialize();
-            foreach (var coord in coords)
-            {
-                result |= Bitboard.KnightMoves[coord];
-            }
-            return result;
-        }
-        internal Bitboard GetBB_WhiteBishopAttacks()
-        {
-            return BB_WhiteBishops.AttackFill_Bishop(BB_Empty);
-        }
-        internal Bitboard GetBB_BlackBishopAttacks()
-        {
-            return BB_BlackBishops.AttackFill_Bishop(BB_Empty);
-        }
-        internal Bitboard GetBB_WhiteRookAttacks()
-        {
-            return BB_WhiteRooks.AttackFill_Rook(BB_Empty);
-        }
-        internal Bitboard GetBB_BlackRookAttacks()
-        {
-            return BB_BlackRooks.AttackFill_Rook(BB_Empty);
-        }
-        internal Bitboard GetBB_WhiteQueenAttacks()
-        {
-            return BB_WhiteQueens.AttackFill_Queen(BB_Empty);
-        }
-        internal Bitboard GetBB_BlackQueenAttacks()
-        {
-            return BB_BlackQueens.AttackFill_Queen(BB_Empty);
-        }
-        internal Bitboard GetBB_WhiteKingAttacks()
-        {
-            Bitboard result = Bitboard.Empty;
-            var coords = BB_WhiteKing.Serialize();
-            foreach (var coord in coords)
-            {
-                result |= Bitboard.KingMoves[coord];
-            }
-            return result;
-        }
-        internal ulong GetBB_BlackKingAttacks()
-        {
-            Bitboard result = Bitboard.Empty;
-            var coords = BB_BlackKing.Serialize();
+            var coords = bb.Serialize();
             foreach (var coord in coords)
             {
                 result |= Bitboard.KingMoves[coord];
@@ -552,164 +466,87 @@ namespace KokosEngine
             return result;
         }
 
-        internal void GetWhitePawnMoves()
+        internal void GeneratePawnMoves()
         {
-            GetWhitePawnAdvances();
-            GetWhitePawnCaptures();
+            GeneratePawnAdvances();
+            GeneratePawnCaptures();
         }
-        internal void GetBlackPawnMoves()
-        {
-            GetBlackPawnAdvances();
-            GetBlackPawnCaptures();
-        }
-        internal void GetWhitePawnAdvances()
+        internal void GeneratePawnAdvances()
         {
             //double pushes
-            Bitboard bb = BB_WhitePawns.Overlap(Bitboard.Rank2);
-            bb = bb.Shift_N().Overlap(BB_Empty);
-            bb = bb.Shift_N().Overlap(BB_Empty);
+            Bitboard bb = BB_AllyPawns.Overlap(Bitboard.RelativeRank2(P));
+            bb = bb.Shift_Forward(P).Overlap(BB_Empty);
+            bb = bb.Shift_Forward(P).Overlap(BB_Empty);
             var targets = bb.Serialize();
             foreach (var target in targets)
             {
-                _moves.Add(new Moves.White.DoublePawnPush(Irreversibles, target));
+                _moves.Add(new DoublePawnPush(Irreversibles, target));
             }
             //promotions
-            bb = BB_WhitePawns.Overlap(Bitboard.Rank7);
-            bb = bb.Shift_N().Overlap(BB_Empty);
+            bb = BB_AllyPawns.Overlap(Bitboard.RelativeRank7(P));
+            bb = bb.Shift_Forward(P).Overlap(BB_Empty);
             targets = bb.Serialize();
             foreach (var target in targets)
             {
-                _moves.AddRange(Moves.White.Promotion.GetAll(Irreversibles, target));
+                _moves.AddRange(Promotion.GetAll(Irreversibles, target));
             }
             //quiet
-            bb = BB_WhitePawns.Overlap(Bitboard.Rank7.Inverse());
-            bb = bb.Shift_N().Overlap(BB_Empty);
+            bb = BB_AllyPawns.Overlap(Bitboard.RelativeRank7(P).Inverse());
+            bb = bb.Shift_Forward(P).Overlap(BB_Empty);
             targets = bb.Serialize();
             foreach (var target in targets)
             {
-                _moves.Add(new Moves.White.Quiet(Irreversibles, target.South, target, Piece.WhitePawn));
+                _moves.Add(new QuietMove(Irreversibles, target.Backward(P), target, IsWhiteMove ? Piece.WhitePawn : Piece.BlackPawn));
             }
         }
-        internal void GetWhitePawnCaptures()
+        internal void GeneratePawnCaptures()
         {
-            Bitboard bb_captures = BB_WhitePawnAttacks.Overlap(BB_Black);
+            Bitboard bb_captures = GetPawnAttacks(BB_AllyPawns, P).Overlap(BB_Enemies);
 
             //promotion captures
-            Bitboard bb = bb_captures.Overlap(Bitboard.Rank8);
-            Bitboard bb_fromwest = bb.Shift_SW().Overlap(BB_WhitePawns);
+            Bitboard bb = bb_captures.Overlap(Bitboard.RelativeRank8(P));
+            Bitboard bb_fromwest = bb.Shift_BackwardWest(P).Overlap(BB_AllyPawns);
             var sources = bb_fromwest.Serialize();
             foreach (var source in sources)
             {
-                Coordinate target = source.NE;
-                _moves.AddRange(Moves.White.PromotionCapture.GetAll(Irreversibles, source, target, Mailbox[target]));
+                Coordinate target = source.ForwardEast(P);
+                _moves.AddRange(PromotionCapture.GetAll(Irreversibles, source, target, Mailbox[target]));
             }
-            Bitboard bb_fromeast = bb.Shift_SE().Overlap(BB_WhitePawns);
+            Bitboard bb_fromeast = bb.Shift_BackwardEast(P).Overlap(BB_AllyPawns);
             sources = bb_fromeast.Serialize();
             foreach (var source in sources)
             {
-                Coordinate target = source.NW;
-                _moves.AddRange(Moves.White.PromotionCapture.GetAll(Irreversibles, source, target, Mailbox[target]));
+                Coordinate target = source.ForwardWest(P);
+                _moves.AddRange(PromotionCapture.GetAll(Irreversibles, source, target, Mailbox[target]));
             }
             //enpassant
-            bb = BB_WhitePawns.Overlap(BB_PossibleEP.Shift_SW().Union(BB_PossibleEP.Shift_SE()));
+            bb = BB_AllyPawns.Overlap(BB_PossibleEP.Shift_BackwardWest(P).Union(BB_PossibleEP.Shift_BackwardEast(P)));
             sources = bb.Serialize();
             foreach (var source in sources)
             {
-                _moves.Add(new Moves.White.EnPassant(Irreversibles, source));
+                _moves.Add(new EnPassant(Irreversibles, source));
             }
             //normal captures
-            bb = bb_captures.Overlap(Bitboard.Rank8.Inverse());
-            bb_fromwest = bb.Shift_SW().Overlap(BB_WhitePawns);
+            bb = bb_captures.Overlap(Bitboard.RelativeRank8(P).Inverse());
+            bb_fromwest = bb.Shift_BackwardWest(P).Overlap(BB_AllyPawns);
             sources = bb_fromwest.Serialize();
             foreach (var source in sources)
             {
-                Coordinate target = source.NE;
-                _moves.Add(new Moves.White.Capture(Irreversibles, source, target, Piece.WhitePawn, Mailbox[target]));
+                Coordinate target = source.ForwardEast(P);
+                _moves.Add(new Capture(Irreversibles, source, target, IsWhiteMove ? Piece.WhitePawn : Piece.BlackPawn, Mailbox[target]));
             }
-            bb_fromeast = bb.Shift_SE() & BB_WhitePawns;
+            bb_fromeast = bb.Shift_BackwardEast(P) & BB_AllyPawns;
             sources = bb_fromeast.Serialize();
             foreach (var source in sources)
             {
-                Coordinate target = source.NW;
-                _moves.Add(new Moves.White.Capture(Irreversibles, source, target, Piece.WhitePawn, Mailbox[target]));
-            }
-        }
-        internal void GetBlackPawnAdvances()
-        {
-            //double pushes
-            Bitboard bb = BB_BlackPawns.Overlap(Bitboard.Rank7);
-            bb = bb.Shift_S().Overlap(BB_Empty);
-            bb = bb.Shift_S().Overlap(BB_Empty);
-            var targets = bb.Serialize();
-            foreach (var target in targets)
-            {
-                _moves.Add(new Moves.Black.DoublePawnPush(Irreversibles, target));
-            }
-            //promotions
-            bb = BB_BlackPawns.Overlap(Bitboard.Rank2);
-            bb = bb.Shift_S().Overlap(BB_Empty);
-            targets = bb.Serialize();
-            foreach (var target in targets)
-            {
-                _moves.AddRange(Moves.Black.Promotion.GetAll(Irreversibles, target));
-            }
-            //quiet
-            bb = BB_BlackPawns.Overlap(Bitboard.Rank2.Inverse());
-            bb = bb.Shift_S().Overlap(BB_Empty);
-            targets = bb.Serialize();
-            foreach (var target in targets)
-            {
-                _moves.Add(new Moves.Black.Quiet(Irreversibles, target.North, target, Piece.BlackPawn));
-            }
-        }
-        internal void GetBlackPawnCaptures()
-        {
-            Bitboard bb_captures = BB_BlackPawnAttacks.Overlap(BB_White);
-
-            //promotion captures
-            Bitboard bb = bb_captures.Overlap(Bitboard.Rank1);
-            Bitboard bb_fromwest = bb.Shift_NW().Overlap(BB_BlackPawns);
-            var sources = bb_fromwest.Serialize();
-            foreach (var source in sources)
-            {
-                Coordinate target = source.SE;
-                _moves.AddRange(Moves.Black.PromotionCapture.GetAll(Irreversibles, source, target, Mailbox[target]));
-            }
-            Bitboard bb_fromeast = bb.Shift_NE().Overlap(BB_BlackPawns);
-            sources = bb_fromeast.Serialize();
-            foreach (var source in sources)
-            {
-                Coordinate target = source.SW;
-                _moves.AddRange(Moves.Black.PromotionCapture.GetAll(Irreversibles, source, target, Mailbox[target]));
-            }
-            //enpassant
-            bb = BB_BlackPawns.Overlap(BB_PossibleEP.Shift_NW().Union(BB_PossibleEP.Shift_NE()));
-            sources = bb.Serialize();
-            foreach (var source in sources)
-            {
-                _moves.Add(new Moves.Black.EnPassant(Irreversibles, source));
-            }
-            //normal captures
-            bb = bb_captures.Overlap(Bitboard.Rank1.Inverse());
-            bb_fromwest = bb.Shift_NW().Overlap(BB_BlackPawns);
-            sources = bb_fromwest.Serialize();
-            foreach (var source in sources)
-            {
-                Coordinate target = source.SE;
-                _moves.Add(new Moves.Black.Capture(Irreversibles, source, target, Piece.BlackPawn, Mailbox[target]));
-            }
-            bb_fromeast = bb.Shift_NE() & BB_BlackPawns;
-            sources = bb_fromeast.Serialize();
-            foreach (var source in sources)
-            {
-                Coordinate target = source.SW;
-                _moves.Add(new Moves.Black.Capture(Irreversibles, source, target, Piece.BlackPawn, Mailbox[target]));
+                Coordinate target = source.ForwardWest(P);
+                _moves.Add(new Capture(Irreversibles, source, target, IsWhiteMove ? Piece.WhitePawn : Piece.BlackPawn, Mailbox[target]));
             }
         }
 
-        internal void GetWhiteKnightMoves()
+        internal void GenerateKnightMoves()
         {
-            var knights = BB_WhiteKnights.Serialize();
+            var knights = BB_AllyKnights.Serialize();
 
             foreach (var knight in knights)
             {
@@ -717,38 +554,19 @@ namespace KokosEngine
                 var quietTargets = moves.Overlap(BB_Empty).Serialize();
                 foreach (var target in quietTargets)
                 {
-                    _moves.Add(new Moves.White.Quiet(Irreversibles, knight, target, Piece.WhiteKnight));
+                    _moves.Add(new QuietMove(Irreversibles, knight, target, IsWhiteMove ? Piece.WhiteKnight : Piece.BlackKnight));
                 }
-                var captureTargets = moves.Overlap(BB_Black).Serialize();
+                var captureTargets = moves.Overlap(BB_Enemies).Serialize();
                 foreach (var target in captureTargets)
                 {
-                    _moves.Add(new Moves.White.Capture(Irreversibles, knight, target, Piece.WhiteKnight, Mailbox[target]));
-                }
-            }
-        }
-        internal void GetBlackKnightMoves()
-        {
-            var knights = BB_BlackKnights.Serialize();
-
-            foreach (var knight in knights)
-            {
-                Bitboard moves = Bitboard.KnightMoves[knight];
-                var quietTargets = moves.Overlap(BB_Empty).Serialize();
-                foreach (var target in quietTargets)
-                {
-                    _moves.Add(new Moves.Black.Quiet(Irreversibles, knight, target, Piece.BlackKnight));
-                }
-                var captureTargets = moves.Overlap(BB_White).Serialize();
-                foreach (var target in captureTargets)
-                {
-                    _moves.Add(new Moves.Black.Capture(Irreversibles, knight, target, Piece.BlackKnight, Mailbox[target]));
+                    _moves.Add(new Capture(Irreversibles, knight, target, IsWhiteMove ? Piece.WhiteKnight : Piece.BlackKnight, Mailbox[target]));
                 }
             }
         }
 
-        internal void GetWhiteBishopMoves()
+        internal void GenerateBishopMoves()
         {
-            var bishops = BB_WhiteBishops.Serialize();
+            var bishops = BB_AllyBishops.Serialize();
 
             foreach (var bishop in bishops)
             {
@@ -756,38 +574,19 @@ namespace KokosEngine
                 var quietTargets = moves.Overlap(BB_Empty).Serialize();
                 foreach (var target in quietTargets)
                 {
-                    _moves.Add(new Moves.White.Quiet(Irreversibles, bishop, target, Piece.WhiteBishop));
+                    _moves.Add(new QuietMove(Irreversibles, bishop, target, IsWhiteMove ? Piece.WhiteBishop : Piece.BlackBishop));
                 }
-                var captureTargets = moves.Overlap(BB_Black).Serialize();
+                var captureTargets = moves.Overlap(BB_Enemies).Serialize();
                 foreach (var target in captureTargets)
                 {
-                    _moves.Add(new Moves.White.Capture(Irreversibles, bishop, target, Piece.WhiteBishop, Mailbox[target]));
-                }
-            }
-        }
-        internal void GetBlackBishopMoves()
-        {
-            var bishops = BB_BlackBishops.Serialize();
-
-            foreach (var bishop in bishops)
-            {
-                Bitboard moves = new Bitboard(bishop).AttackFill_Bishop(BB_Empty);
-                var quietTargets = moves.Overlap(BB_Empty).Serialize();
-                foreach (var target in quietTargets)
-                {
-                    _moves.Add(new Moves.Black.Quiet(Irreversibles, bishop, target, Piece.BlackBishop));
-                }
-                var captureTargets = moves.Overlap(BB_White).Serialize();
-                foreach (var target in captureTargets)
-                {
-                    _moves.Add(new Moves.Black.Capture(Irreversibles, bishop, target, Piece.BlackBishop, Mailbox[target]));
+                    _moves.Add(new Capture(Irreversibles, bishop, target, IsWhiteMove ? Piece.WhiteBishop : Piece.BlackBishop, Mailbox[target]));
                 }
             }
         }
 
-        internal void GetWhiteRookMoves()
+        internal void GenerateRookMoves()
         {
-            var rooks = BB_WhiteRooks.Serialize();
+            var rooks = BB_AllyRooks.Serialize();
 
             foreach (var rook in rooks)
             {
@@ -795,38 +594,19 @@ namespace KokosEngine
                 var quietTargets = moves.Overlap(BB_Empty).Serialize();
                 foreach (var target in quietTargets)
                 {
-                    _moves.Add(new Moves.White.Quiet(Irreversibles, rook, target, Piece.WhiteRook));
+                    _moves.Add(new QuietMove(Irreversibles, rook, target, IsWhiteMove ? Piece.WhiteRook : Piece.BlackRook));
                 }
-                var captureTargets = moves.Overlap(BB_Black).Serialize();
+                var captureTargets = moves.Overlap(BB_Enemies).Serialize();
                 foreach (var target in captureTargets)
                 {
-                    _moves.Add(new Moves.White.Capture(Irreversibles, rook, target, Piece.WhiteRook, Mailbox[target]));
-                }
-            }
-        }
-        internal void GetBlackRookMoves()
-        {
-            var rooks = BB_BlackRooks.Serialize();
-
-            foreach (var rook in rooks)
-            {
-                Bitboard moves = new Bitboard(rook).AttackFill_Rook(BB_Empty);
-                var quietTargets = moves.Overlap(BB_Empty).Serialize();
-                foreach (var target in quietTargets)
-                {
-                    _moves.Add(new Moves.Black.Quiet(Irreversibles, rook, target, Piece.BlackRook));
-                }
-                var captureTargets = moves.Overlap(BB_White).Serialize();
-                foreach (var target in captureTargets)
-                {
-                    _moves.Add(new Moves.Black.Capture(Irreversibles, rook, target, Piece.BlackRook, Mailbox[target]));
+                    _moves.Add(new Capture(Irreversibles, rook, target, IsWhiteMove ? Piece.WhiteRook : Piece.BlackRook, Mailbox[target]));
                 }
             }
         }
 
-        internal void GetWhiteQueenMoves()
+        internal void GenerateQueenMoves()
         {
-            var queens = BB_WhiteQueens.Serialize();
+            var queens = BB_AllyQueens.Serialize();
 
             foreach (var queen in queens)
             {
@@ -834,85 +614,44 @@ namespace KokosEngine
                 var quietTargets = moves.Overlap(BB_Empty).Serialize();
                 foreach (var target in quietTargets)
                 {
-                    _moves.Add(new Moves.White.Quiet(Irreversibles, queen, target, Piece.WhiteQueen));
+                    _moves.Add(new QuietMove(Irreversibles, queen, target, IsWhiteMove ? Piece.WhiteQueen : Piece.BlackQueen));
                 }
-                var captureTargets = moves.Overlap(BB_Black).Serialize();
+                var captureTargets = moves.Overlap(BB_Enemies).Serialize();
                 foreach (var target in captureTargets)
                 {
-                    _moves.Add(new Moves.White.Capture(Irreversibles, queen, target, Piece.WhiteQueen, Mailbox[target]));
-                }
-            }
-        }
-        internal void GetBlackQueenMoves()
-        {
-            var queens = BB_BlackQueens.Serialize();
-
-            foreach (var queen in queens)
-            {
-                Bitboard moves = new Bitboard(queen).AttackFill_Queen(BB_Empty);
-                var quietTargets = moves.Overlap(BB_Empty).Serialize();
-                foreach (var target in quietTargets)
-                {
-                    _moves.Add(new Moves.Black.Quiet(Irreversibles, queen, target, Piece.BlackQueen));
-                }
-                var captureTargets = moves.Overlap(BB_White).Serialize();
-                foreach (var target in captureTargets)
-                {
-                    _moves.Add(new Moves.Black.Capture(Irreversibles, queen, target, Piece.BlackQueen, Mailbox[target]));
+                    _moves.Add(new Capture(Irreversibles, queen, target, IsWhiteMove ? Piece.WhiteQueen : Piece.BlackQueen, Mailbox[target]));
                 }
             }
         }
 
-        internal void GetWhiteKingMoves()
+        internal void GenerateKingMoves()
         {
             //castling
-            if (Irreversibles.CastleWhiteShort && (BB_AllBlackAttacks.Overlap(Bitboard.e1f1g1) == 0) && (BB_Occupied.Overlap(Bitboard.f1g1) == 0))
+            if (CanAllyCastleShort() && (BB_Occupied.Overlap(Bitboard.HomeFG(P)) == 0) && (GetAllEnemyAttacks().Overlap(Bitboard.HomeEFG(P)) == 0))
             {
-                _moves.Add(new Moves.White.ShortCastle(Irreversibles));
+                _moves.Add(new ShortCastle(Irreversibles, P));
             }
-            if (Irreversibles.CastleWhiteLong && (BB_AllBlackAttacks.Overlap(Bitboard.e1d1c1) == 0) && (BB_Occupied.Overlap(Bitboard.d1c1b1) == 0))
+            if (CanAllyCastleLong() && (BB_Occupied.Overlap(Bitboard.HomeDCB(P)) == 0) && (GetAllEnemyAttacks().Overlap(Bitboard.HomeEDC(P)) == 0))
             {
-                _moves.Add(new Moves.White.LongCastle(Irreversibles));
+                _moves.Add(new LongCastle(Irreversibles, P));
             }
             //quiet+captures
-            Coordinate king = BB_WhiteKing.BitScanForward();
-            Bitboard moves = Bitboard.KingMoves[king];
+            Coordinate king = BB_AllyKing.BitScanForward();
+            Bitboard moves = GetKingAttacks(BB_AllyKing);
             var quietTargets = moves.Overlap(BB_Empty).Serialize();
             foreach (var target in quietTargets)
             {
-                _moves.Add(new Moves.White.Quiet(Irreversibles, king, target, Piece.WhiteKing));
+                _moves.Add(new QuietMove(Irreversibles, king, target, IsWhiteMove ? Piece.WhiteKing : Piece.BlackKing));
             }
-            var captureTargets = moves.Overlap(BB_Black).Serialize();
+            var captureTargets = moves.Overlap(BB_Enemies).Serialize();
             foreach (var target in captureTargets)
             {
-                _moves.Add(new Moves.White.Capture(Irreversibles, king, target, Piece.WhiteKing, Mailbox[target]));
+                _moves.Add(new Capture(Irreversibles, king, target, IsWhiteMove ? Piece.WhiteKing : Piece.BlackKing, Mailbox[target]));
             }
         }
-        internal void GetBlackKingMoves()
-        {
-            //castling
-            if (Irreversibles.CastleBlackShort && (BB_AllWhiteAttacks.Overlap(Bitboard.e8f8g8) == 0) && (BB_Occupied.Overlap(Bitboard.f8g8) == 0))
-            {
-                _moves.Add(new Moves.Black.ShortCastle(Irreversibles));
-            }
-            if (Irreversibles.CastleBlackLong && (BB_AllWhiteAttacks.Overlap(Bitboard.e8d8c8) == 0) && (BB_Occupied.Overlap(Bitboard.d8c8b8) == 0))
-            {
-                _moves.Add(new Moves.Black.LongCastle(Irreversibles));
-            }
-            //quiet+captures
-            Coordinate king = BB_BlackKing.BitScanForward();
-            Bitboard moves = Bitboard.KingMoves[king];
-            var quietTargets = moves.Overlap(BB_Empty).Serialize();
-            foreach (var target in quietTargets)
-            {
-                _moves.Add(new Moves.Black.Quiet(Irreversibles, king, target, Piece.BlackKing));
-            }
-            var captureTargets = moves.Overlap(BB_White).Serialize();
-            foreach (var target in captureTargets)
-            {
-                _moves.Add(new Moves.Black.Capture(Irreversibles, king, target, Piece.BlackKing, Mailbox[target]));
-            }
-        }
+
+        private bool CanAllyCastleLong() => IsWhiteMove ? Irreversibles.CastleWhiteLong : Irreversibles.CastleBlackLong;
+        private bool CanAllyCastleShort() => IsWhiteMove ? Irreversibles.CastleWhiteShort : Irreversibles.CastleBlackShort;
 
         #endregion
 
@@ -1014,7 +753,7 @@ namespace KokosEngine
             for (int i = 0; i < movelist.Length; i++)
             {
                 var move = movelist[i];
-                MakeMove(move);                
+                MakeMove(move);
                 if (!CanKingBeCaptured())
                 {
                     long subresult = Perft(depth - 1, false);

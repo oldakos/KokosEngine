@@ -11,7 +11,10 @@ namespace KokosEngine
         /// <summary>
         /// Get the square-based notation of the move, e.g. "a2a4" or "e7e8Q".
         /// </summary>
-        internal string GetSquareNotation();
+        internal string GetSquareNotation()
+        {
+            return CoordinateFrom().ToString() + CoordinateTo().ToString();
+        }
         /// <summary>
         /// Get the piece-based notation of the move, e.g. "a4" or "e8=Q" or "Nxf5".
         /// </summary>
@@ -32,5 +35,7 @@ namespace KokosEngine
         /// Get the IrreversibleInformation as it was before the move.
         /// </summary>
         internal IrreversibleInformation IrreversiblesAfterUndo();
+        internal Coordinate CoordinateFrom();
+        internal Coordinate CoordinateTo();
     }
 }

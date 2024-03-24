@@ -347,5 +347,23 @@ namespace KokosEngine
             return list;
         }
 
+        internal Bitboard Shift_ForwardEast(Color color) => color == Color.White ? Shift_NE() : Shift_SE();
+        internal Bitboard Shift_ForwardWest(Color color) => color == Color.White ? Shift_NW() : Shift_SW();
+        internal Bitboard Shift_Forward(Color color) => color == Color.White ? Shift_N() : Shift_S();
+        internal Bitboard Shift_BackwardEast(Color color) => color == Color.White ? Shift_SE() : Shift_NE();
+        internal Bitboard Shift_BackwardWest(Color color) => color == Color.White ? Shift_SW() : Shift_NW();
+        internal Bitboard Shift_Backward(Color color) => color == Color.White ? Shift_S() : Shift_N();
+        internal static Bitboard RelativeRank1(Color color) => color == Color.White ? Rank1 : Rank8;
+        internal static Bitboard RelativeRank2(Color color) => color == Color.White ? Rank2 : Rank7;
+        internal static Bitboard RelativeRank7(Color color) => color == Color.White ? Rank7 : Rank2;
+        internal static Bitboard RelativeRank8(Color color) => color == Color.White ? Rank8 : Rank1;
+
+        internal static Bitboard HomeFG(Color color) => color == Color.White ? f1g1 : f8g8;
+
+        internal static Bitboard HomeEFG(Color color) => color == Color.White ? e1f1g1 : e8f8g8;
+
+        internal static Bitboard HomeDCB(Color color) => color == Color.White ? d1c1b1 : d8c8b8;
+
+        internal static Bitboard HomeEDC(Color color) => color == Color.White ? e1d1c1 : e8d8c8;
     }
 }

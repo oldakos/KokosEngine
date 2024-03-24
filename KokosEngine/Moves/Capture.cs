@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace KokosEngine.Moves.White
+namespace KokosEngine.Moves
 {
     internal class Capture : IMove
     {
@@ -16,15 +16,26 @@ namespace KokosEngine.Moves.White
 
         public Capture(IrreversibleInformation irreversibles, Coordinate from, Coordinate to, Piece pieceMoved, Piece pieceCaptured)
         {
-            this.irrBefore = irreversibles;
-            this.coordFrom = from;
-            this.coordTo = to;
+            irrBefore = irreversibles;
+            coordFrom = from;
+            coordTo = to;
             this.pieceMoved = pieceMoved;
             this.pieceCaptured = pieceCaptured;
         }
+
+        Coordinate IMove.CoordinateFrom()
+        {
+            return coordFrom;
+        }
+
+        Coordinate IMove.CoordinateTo()
+        {
+            return coordTo;
+        }
+
         string IMove.GetPieceNotation()
         {
-            if (pieceMoved == Piece.WhitePawn)
+            if (pieceMoved.IsPawn())
             {
                 return coordFrom.GetFileString() + "x" + coordTo.ToString();
             }
@@ -33,24 +44,23 @@ namespace KokosEngine.Moves.White
                 return pieceMoved.ToNotation() + "x" + coordTo.ToString();
             }
         }
-        string IMove.GetSquareNotation()
-        {
-            return coordFrom.ToString() + coordTo.ToString();
-        }
+
         IrreversibleInformation IMove.IrreversiblesAfterDo()
         {
             return new IrreversibleInformation(
-                    (coordFrom == Coordinate.e1 || coordFrom == Coordinate.h1) ? false : irrBefore.CastleWhiteShort,
-                    (coordFrom == Coordinate.e1 || coordFrom == Coordinate.a1) ? false : irrBefore.CastleWhiteLong,
-                    (coordTo == Coordinate.e8 || coordTo == Coordinate.h8) ? false : irrBefore.CastleBlackShort,
-                    (coordTo == Coordinate.e8 || coordTo == Coordinate.a8) ? false : irrBefore.CastleBlackLong,
+                    coordFrom.ImpactsCastleWhiteShort() || coordTo.ImpactsCastleWhiteShort() ? false : irrBefore.CastleWhiteShort,
+                    coordFrom.ImpactsCastleWhiteLong() || coordTo.ImpactsCastleWhiteLong() ? false : irrBefore.CastleWhiteLong,
+                    coordFrom.ImpactsCastleBlackShort() || coordTo.ImpactsCastleBlackShort() ? false : irrBefore.CastleBlackShort,
+                    coordFrom.ImpactsCastleBlackLong() || coordTo.ImpactsCastleBlackLong() ? false : irrBefore.CastleBlackLong,
                     Coordinate.None,
                     0);
         }
+
         IrreversibleInformation IMove.IrreversiblesAfterUndo()
         {
             return irrBefore;
         }
+
         IEnumerable<Square> IMove.UpdatesAfterDo()
         {
             return new Square[]
@@ -59,6 +69,7 @@ namespace KokosEngine.Moves.White
                 new Square(coordFrom, Piece.None)
             };
         }
+
         IEnumerable<Square> IMove.UpdatesAfterUndo()
         {
             return new Square[]

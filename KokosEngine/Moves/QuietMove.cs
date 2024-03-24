@@ -4,16 +4,16 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace KokosEngine.Moves.White
+namespace KokosEngine.Moves
 {
-    internal class Quiet : IMove
+    internal class QuietMove : IMove
     {
         private IrreversibleInformation irrBefore;
         private Coordinate coordFrom;
         private Coordinate coordTo;
         private Piece pieceMoved;
 
-        public Quiet(IrreversibleInformation irreversibles, Coordinate coordFrom, Coordinate coordTo, Piece pieceMoved)
+        public QuietMove(IrreversibleInformation irreversibles, Coordinate coordFrom, Coordinate coordTo, Piece pieceMoved)
         {
             irrBefore = irreversibles;
             this.coordFrom = coordFrom;
@@ -21,9 +21,19 @@ namespace KokosEngine.Moves.White
             this.pieceMoved = pieceMoved;
         }
 
+        Coordinate IMove.CoordinateFrom()
+        {
+            return coordFrom;
+        }
+
+        Coordinate IMove.CoordinateTo()
+        {
+            return coordTo;
+        }
+
         string IMove.GetPieceNotation()
         {
-            if (pieceMoved == Piece.WhitePawn)
+            if (pieceMoved.IsPawn())
             {
                 return coordTo.ToString();
             }
@@ -33,20 +43,15 @@ namespace KokosEngine.Moves.White
             }
         }
 
-        string IMove.GetSquareNotation()
-        {
-            return coordFrom.ToString() + coordTo.ToString();
-        }
-
         IrreversibleInformation IMove.IrreversiblesAfterDo()
         {
-            return new IrreversibleInformation(                    
-                    (coordFrom == Coordinate.e1 || coordFrom == Coordinate.h1) ? false : irrBefore.CastleWhiteShort,
-                    (coordFrom == Coordinate.e1 || coordFrom == Coordinate.a1) ? false : irrBefore.CastleWhiteLong,
-                    irrBefore.CastleBlackShort,
-                    irrBefore.CastleBlackLong,
+            return new IrreversibleInformation(
+                    coordFrom.ImpactsCastleWhiteShort() ? false : irrBefore.CastleWhiteShort,
+                    coordFrom.ImpactsCastleWhiteLong() ? false : irrBefore.CastleWhiteLong,
+                    coordFrom.ImpactsCastleBlackShort() ? false : irrBefore.CastleBlackShort,
+                    coordFrom.ImpactsCastleBlackLong() ? false : irrBefore.CastleBlackLong,
                     Coordinate.None,
-                    (pieceMoved == Piece.WhitePawn) ? 0 : irrBefore.HalfmovesSinceCaptureOrPawnMove + 1);
+                    pieceMoved.IsPawn() ? 0 : irrBefore.HalfmovesSinceCaptureOrPawnMove + 1);
         }
 
         IrreversibleInformation IMove.IrreversiblesAfterUndo()

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace KokosEngine.Moves.Black
+namespace KokosEngine.Moves
 {
     internal class EnPassant : IMove
     {
@@ -16,15 +16,24 @@ namespace KokosEngine.Moves.Black
             irrBefore = irreversibles;
             this.coordFrom = coordFrom;
         }
+        private bool IsWhite()
+        {
+            return irrBefore.PossibleEnPassant.IsNorthOf(coordFrom);
+        }
+
+        Coordinate IMove.CoordinateFrom()
+        {
+            return coordFrom;
+        }
+
+        Coordinate IMove.CoordinateTo()
+        {
+            return irrBefore.PossibleEnPassant;
+        }
 
         string IMove.GetPieceNotation()
         {
             return coordFrom.GetFileString() + "x" + irrBefore.PossibleEnPassant.ToString();
-        }
-
-        string IMove.GetSquareNotation()
-        {
-            return coordFrom.ToString() + irrBefore.PossibleEnPassant.ToString();
         }
 
         IrreversibleInformation IMove.IrreversiblesAfterDo()
@@ -42,22 +51,38 @@ namespace KokosEngine.Moves.Black
 
         IEnumerable<Square> IMove.UpdatesAfterDo()
         {
-            return new Square[]
-            {
+            if (IsWhite())
+                return new Square[]
+                {
+                new Square(irrBefore.PossibleEnPassant, Piece.WhitePawn),
+                new Square(irrBefore.PossibleEnPassant.South, Piece.None),
+                new Square(coordFrom, Piece.None)
+                };
+            else
+                return new Square[]
+                {
                 new Square(irrBefore.PossibleEnPassant, Piece.BlackPawn),
                 new Square(irrBefore.PossibleEnPassant.North, Piece.None),
                 new Square(coordFrom, Piece.None)
-            };
+                };
         }
 
         IEnumerable<Square> IMove.UpdatesAfterUndo()
         {
-            return new Square[]
-            {
+            if (IsWhite())
+                return new Square[]
+                {
+                new Square(irrBefore.PossibleEnPassant, Piece.None),
+                new Square(irrBefore.PossibleEnPassant.South, Piece.BlackPawn),
+                new Square(coordFrom, Piece.WhitePawn)
+                };
+            else
+                return new Square[]
+                {
                 new Square(irrBefore.PossibleEnPassant, Piece.None),
                 new Square(irrBefore.PossibleEnPassant.North, Piece.WhitePawn),
                 new Square(coordFrom, Piece.BlackPawn)
-            };
+                };
         }
     }
 }
