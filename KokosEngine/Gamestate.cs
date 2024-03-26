@@ -738,7 +738,7 @@ namespace KokosEngine
             }
             return sb.ToString();
         }
-        internal long Perft(int depth, bool detail)
+        internal long Perft(int depth, bool detail = false)
         {
             if (depth == 0) return 1;
 
@@ -755,13 +755,6 @@ namespace KokosEngine
                     if (detail)
                     {
                         Console.WriteLine(move.GetPieceNotation() + " (" + move.GetSquareNotation() + "): " + subresult.ToString());
-                    }
-                }
-                else
-                {
-                    if (detail)
-                    {
-                        Console.WriteLine(move.GetPieceNotation() + " (" + move.GetSquareNotation() + "): Illegal");
                     }
                 }
                 UnmakeMove();

@@ -4,23 +4,41 @@ namespace KokosEngine
 {
     internal class Program
     {
+        const string STARTPOS = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
         static void Main(string[] args)
         {
+            string fen = "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1";
+            int depth = 6;
+            bool verbose = true;
+
+            //Perft(depth, verbose);
+            Perft(fen, depth, verbose);
+        }
+
+        static long Perft(int depth, bool verbose = false)
+        {
+            return Perft(STARTPOS, depth, verbose);
+        }
+
+        static long Perft(string fen, int depth, bool verbose = false)
+        {
             var gs = new Gamestate();
-
-            //gs.LoadFEN("r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1"); //perft 6
-            gs.LoadFEN("r3k2r/Pppp1ppp/1b3nbN/nPP5/BB2P3/q4N2/Pp1P2PP/R2Q1RK1 b kq - 0 1"); //5
-            //gs.LoadFEN("r3k2r/Ppp2ppp/1b3nbN/nPPp4/BB2P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 2"); //4
-            //gs.LoadFEN("r3k2r/Ppp2ppp/1P3nbN/nP1p4/BB2P3/q4N2/Pp1P2PP/R2Q1RK1 b kq - 0 2"); //3
-            //gs.LoadFEN("r3k2r/Ppp2ppp/1P3nbN/nP1p4/BB2P3/q4N2/P2P2PP/n2Q1RK1 w kq - 0 3"); //2
-            //gs.LoadFEN("r3k2r/PpP2ppp/5nbN/nP1p4/BB2P3/q4N2/P2P2PP/n2Q1RK1 b kq - 0 3"); //1
-
-            //gs.SetStartingPosition();
-            int depth = 5;
-            Console.WriteLine("Perft " + depth.ToString());
+            gs.LoadFEN(fen);
+            if (verbose) Console.WriteLine("perft " + depth.ToString());
+            long nodes;
             var start = DateTime.Now;
-            Console.WriteLine("Total nodes: " + gs.Perft(depth, true).ToString());
-            Console.WriteLine("Duration: " + (DateTime.Now - start).ToString());
+            nodes = gs.Perft(depth, verbose);
+            var end = DateTime.Now;
+            var duration = end - start;
+            if (verbose)
+            {
+                Console.WriteLine($"Nodes searched: {nodes}");
+                Console.WriteLine($"Duration: {duration}");
+                Console.WriteLine();
+                Console.WriteLine($"knps ~ {nodes / (duration.TotalSeconds * 1000)}");
+            }
+            return nodes;
         }
     }
 }
