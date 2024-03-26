@@ -240,6 +240,8 @@ namespace KokosEngine
 
             Irreversibles = new IrreversibleInformation(irr_cws, irr_cwl, irr_cbs, irr_cbl, irr_ep, irr_hm);
 
+            RefreshAllHelperBitboards();
+
             return this;
         }
 
@@ -250,6 +252,7 @@ namespace KokosEngine
             UpdateIrreversibles(move);
             IncrementFullmoveCounter();
             SwitchPlayerToMove();
+            RefreshAllHelperBitboards();
         }
 
         internal void UnmakeMove()
@@ -262,6 +265,7 @@ namespace KokosEngine
             DecrementFullmoveCounter();
             RestoreIrreversibles(move);
             RevertPiecesState(move);
+            RefreshAllHelperBitboards();
         }
 
         #region Make/Unmake Move Helper Methods
@@ -311,40 +315,31 @@ namespace KokosEngine
         }
         internal void SetPieceOnCoordinate(Piece piece, Coordinate coord)
         {
-            ClearBitInAllBitboards(coord);  //make sure that we don't store two pieces on one coordinate at the same time
+            ClearCoordFromPieceBitboard(coord);  //make sure that we don't store two pieces on one coordinate at the same time
             Bitboard mask = new Bitboard(coord);    //get coord as bitboard
             Bitboards[(int)piece] = Bitboards[(int)piece].Union(mask);  //set coord in the piece's bitboard
-            BB_Occupied = BB_Occupied.Union(mask); //also set coord in "occupied"
-            BB_Empty = BB_Empty.Overlap(mask.Inverse()); //clear coord from "empty"
-
-            //set the coord in the piece's color's bitboard
-            if (piece.IsWhite()) BB_White = BB_White.Union(mask);
-            else BB_Black = BB_Black.Union(mask);
-
             Mailbox[coord] = piece;
         }
         internal void ClearCoordinate(Coordinate coord)
         {
+            ClearCoordFromPieceBitboard(coord);
             Mailbox[coord] = Piece.None;
-            ClearBitInAllBitboards(coord);
         }
-        internal void ClearBitInAllBitboards(Coordinate coord)
+        internal void ClearCoordFromPieceBitboard(Coordinate coord)
         {
-            Bitboard mask = new Bitboard(coord).Inverse();  //get "all coords except the given one" as bitboard
-            for (int i = 0; i < Bitboards.Length; i++)
-            {
-                Bitboards[i] = Bitboards[i].Overlap(mask);  //update each bitboard to overlap with the new "not that coord" bitboard
-            }
-            BB_Empty = BB_Empty.Union(mask.Inverse()); //also SET the cleared coord in "empty"
+            Piece piece = Mailbox[coord];
+            if (piece == Piece.None) return;
 
-            //clear coord from "occupied", "White" and "Black"
-            BB_Occupied = BB_Occupied.Overlap(mask);
-            BB_White = BB_White.Overlap(mask);
-            BB_Black = BB_Black.Overlap(mask);
+            Bitboard mask = new Bitboard(coord).Inverse();  //get "all coords except the given one" as bitboard            
+            Bitboards[(int)piece] = Bitboards[(int)piece].Overlap(mask);
         }
 
         internal void RefreshAllHelperBitboards()
         {
+            BB_White = BB_WhitePawns.Union(BB_WhiteKing).Union(BB_WhiteKnights).Union(BB_WhiteBishops).Union(BB_WhiteRooks).Union(BB_WhiteQueens);
+            BB_Black = BB_BlackPawns.Union(BB_BlackKing).Union(BB_BlackKnights).Union(BB_BlackBishops).Union(BB_BlackRooks).Union(BB_BlackQueens);
+            BB_Occupied = BB_White.Union(BB_Black);
+            BB_Empty = BB_Occupied.Inverse();
             BB_PossibleEP = Irreversibles.EPBitboard;
             BB_EnemyAttacks = 0;
         }
@@ -389,8 +384,7 @@ namespace KokosEngine
         }
 
         internal List<IMove> GetPseudoLegalMoves()
-        {
-            RefreshAllHelperBitboards();
+        {            
             _moves.Clear();
             GeneratePawnMoves();
             GenerateKnightMoves();
@@ -761,6 +755,13 @@ namespace KokosEngine
                     if (detail)
                     {
                         Console.WriteLine(move.GetPieceNotation() + " (" + move.GetSquareNotation() + "): " + subresult.ToString());
+                    }
+                }
+                else
+                {
+                    if (detail)
+                    {
+                        Console.WriteLine(move.GetPieceNotation() + " (" + move.GetSquareNotation() + "): Illegal");
                     }
                 }
                 UnmakeMove();
